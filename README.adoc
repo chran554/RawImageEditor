@@ -1,0 +1,55 @@
+# RawImageEditor
+
+A raw file "editor" for my own raw image file format.
+
+## RawImage format
+
+Simple enough:
+
+.Image file header
+|===
+|Data format |Value
+
+|32bit big endian integer |File format major version
+|32bit big endian integer |File format minor version
+
+|32bit big endian integer |Image width in pixels
+|32bit big endian integer |Image height in pixels
+|===
+
+.Image pixel data, pixel by pixel starting at top left and then from left to right, top line to bottom line. Each pixels R,G, and B values in a long 32 bit float stream.
+|===
+|Data format |Value
+
+|32bit big endian float |R value of RGB. Value range from 0.0 and up (no limit).
+|32bit big endian float |G value of RGB. Value range from 0.0 and up (no limit).
+|32bit big endian float |B value of RGB. Value range from 0.0 and up (no limit).
+|===
+
+.RawImage file format (pseudo code in go lang)
+[source,go]
+----
+type Color struct{ R, G, B float32 }
+
+type FloatImage struct {
+    name   string
+    pixels []color.Color
+    Width  int
+    Height int
+}
+
+func WriteRawImage(image *FloatImage) {
+    var byteBuffer bytes.Buffer
+
+    fileFormatVersionMajor := 1
+    fileFormatVersionMinor := 0
+
+    writeBinaryInt32BigEndian(&byteBuffer, int32(fileFormatVersionMajor))
+    writeBinaryInt32BigEndian(&byteBuffer, int32(fileFormatVersionMinor))
+    writeBinaryInt32BigEndian(&byteBuffer, int32(image.Width))
+    writeBinaryInt32BigEndian(&byteBuffer, int32(image.Height))
+
+    binary.Write(&byteBuffer, binary.BigEndian, image.pixels)
+}
+----
+
