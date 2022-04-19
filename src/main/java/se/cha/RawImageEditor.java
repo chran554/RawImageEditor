@@ -1,6 +1,8 @@
 package se.cha;
 
 
+import se.cha.function.SplineFunction;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
@@ -18,30 +20,30 @@ public class RawImageEditor extends JFrame {
             public void run() {
                 final ImagePanel imagePanel = new ImagePanel();
 
-                final SplineCanvas splineCanvas = new SplineCanvas();
+                final FunctionPanel functionPanel = new FunctionPanel(new SplineFunction());
 
                 final RawFloatImage rawFloatImage = new RawFloatImage();
                 try {
                     rawFloatImage.loadFile("images/cornellbox2.praw");
-                    imagePanel.setImage(rawFloatImage.getImage(splineCanvas));
+                    imagePanel.setImage(rawFloatImage.getImage(functionPanel));
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
 
-                splineCanvas.setPreferredSize(new Dimension(400, 300));
-                splineCanvas.addFunctionChangedListener(() -> histogramFunctionChanged(imagePanel, rawFloatImage, splineCanvas));
+                functionPanel.setPreferredSize(new Dimension(400, 300));
+                functionPanel.addFunctionChangedListener(() -> histogramFunctionChanged(imagePanel, rawFloatImage, functionPanel));
 
                 imagePanel.addMousePositionListener(point -> {
                     if (point == null) {
-                        splineCanvas.removeHighlightPosition();
+                        functionPanel.removeHighlightPosition();
                     } else {
-                        final int pixelX = (int) Math.round(point.x * rawFloatImage.getWidth());
-                        final int pixelY = (int) Math.round(point.y * rawFloatImage.getHeight());
+                        final int pixelX = (int) Math.round(point.getX() * rawFloatImage.getWidth());
+                        final int pixelY = (int) Math.round(point.getY() * rawFloatImage.getHeight());
 
                         final double intensityValue = rawFloatImage.getIntensityValue(pixelX, pixelY);
                         final double intensityMaxValue = rawFloatImage.getIntensityMaxValue();
 
-                        splineCanvas.setHighlightPosition(intensityValue / intensityMaxValue);
+                        functionPanel.setHighlightPosition(intensityValue / intensityMaxValue);
                     }
                 });
 
@@ -50,7 +52,7 @@ public class RawImageEditor extends JFrame {
 
                 final JPanel histogramBorder = new JPanel();
                 histogramBorder.setBorder(new EmptyBorder(10, 10, 10, 10));
-                histogramBorder.add(splineCanvas);
+                histogramBorder.add(functionPanel);
 
                 final RawImageEditor frame = new RawImageEditor();
                 frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -60,22 +62,22 @@ public class RawImageEditor extends JFrame {
                 frame.setVisible(true);
             }
 
-            public void histogramFunctionChanged(ImagePanel imagePanel, RawFloatImage rawFloatImage, SplineCanvas splineCanvas) {
-                imagePanel.setImage(rawFloatImage.getImage(splineCanvas));
+            public void histogramFunctionChanged(ImagePanel imagePanel, RawFloatImage rawFloatImage, FunctionPanel functionPanel) {
+                imagePanel.setImage(rawFloatImage.getImage(functionPanel));
 
-                final Rectangle splineCanvasBounds = splineCanvas.getBounds();
-                final Image histogramBackgroundImage = createHistogramImage(rawFloatImage, splineCanvasBounds.width, splineCanvasBounds.height, splineCanvas);
-                splineCanvas.setBackgroundImage(histogramBackgroundImage);
+                final Rectangle splineCanvasBounds = functionPanel.getBounds();
+                final Image histogramBackgroundImage = createHistogramImage(rawFloatImage, splineCanvasBounds.width, splineCanvasBounds.height, functionPanel);
+                functionPanel.setBackgroundImage(histogramBackgroundImage);
             }
 
-            public Image createHistogramImage(RawFloatImage rawFloatImage, int width, int height, SplineCanvas splineCanvas) {
+            public Image createHistogramImage(RawFloatImage rawFloatImage, int width, int height, FunctionPanel functionPanel) {
                 final BufferedImage histogramImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
                 final Graphics2D graphics = (Graphics2D) histogramImage.getGraphics();
                 graphics.setColor(new Color(255, 255, 255, 0));
                 graphics.fillRect(0, 0, width - 1, height - 1);
 
                 final Histogram histogram = rawFloatImage.getIntensityHistogram(width);
-                final Histogram histogramOutput = rawFloatImage.getIntensityHistogram(width, splineCanvas);
+                final Histogram histogramOutput = rawFloatImage.getIntensityHistogram(width, functionPanel);
 
                 graphics.setColor(new Color(255, 255, 255, 32));
                 graphics.setColor(new Color(255, 128, 128, 64));

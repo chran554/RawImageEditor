@@ -1,5 +1,7 @@
 package se.cha;
 
+import se.cha.function.Point;
+
 import javax.swing.*;
 import java.awt.Color;
 import java.awt.Dimension;

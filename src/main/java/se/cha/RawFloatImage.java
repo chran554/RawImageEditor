@@ -66,12 +66,12 @@ public class RawFloatImage {
         this.intensityMaxValue = tmpIntensityMax;
     }
 
-    public BufferedImage getImage(SplineCanvas splineCanvas) {
+    public BufferedImage getImage(FunctionPanel functionPanel) {
         final int amountPixels = width * height;
         final int[] pixels = new int[amountPixels];
 
         for (int pixelIndex = 0; pixelIndex < amountPixels; pixelIndex++) {
-            final double pixelIntensityFactor = getPixelIntensityFactor(pixelIndex, splineCanvas);
+            final double pixelIntensityFactor = getPixelIntensityFactor(pixelIndex, functionPanel);
 
             // Perceptive linear scaling of RGB channels according to pixel intensity (using CIE 1931 Lstar scale)
             final int rValue = (int) clamp(0.0, 255.0, 256.0 * pixelIntensityFactor * r[pixelIndex] / channelMaxValue);
@@ -85,7 +85,7 @@ public class RawFloatImage {
         return image;
     }
 
-    private double getPixelIntensityFactor(int pixelIndex, SplineCanvas splineCanvas) {
+    private double getPixelIntensityFactor(int pixelIndex, FunctionPanel functionPanel) {
         final double Ymax = 100.0;
 
         final double originalYluminance = Cie.sRGBtoYluminance(
@@ -94,7 +94,7 @@ public class RawFloatImage {
                 b[pixelIndex] / channelMaxValue);
         final double originalLstarIntensity = Cie.YtoLstar2(originalYluminance) / Ymax;
         final double originalNormalizedLstarIntensity = originalLstarIntensity / intensityMaxValue;
-        final double newNormalizedLstarIntensity = splineCanvas.getValue(originalNormalizedLstarIntensity);
+        final double newNormalizedLstarIntensity = functionPanel.getValue(originalNormalizedLstarIntensity);
         final double newLstarIntensity = newNormalizedLstarIntensity * intensityMaxValue;
         final double newYLuminance = Cie.LstarToY2(newLstarIntensity) * Ymax;
 
@@ -133,13 +133,13 @@ public class RawFloatImage {
         return histogram;
     }
 
-    public Histogram getIntensityHistogram(int amountBoxes, SplineCanvas splineCanvas) {
+    public Histogram getIntensityHistogram(int amountBoxes, FunctionPanel functionPanel) {
         final Histogram histogram = new Histogram(amountBoxes, 0.0, intensityMaxValue);
 
         final int amountPixels = width * height;
         for (int pixelIndex = 0; pixelIndex < amountPixels; pixelIndex++) {
             final double normalizedIntensity = getIntensityValue(pixelIndex) / intensityMaxValue;
-            histogram.addValue(splineCanvas.getValue(normalizedIntensity) * intensityMaxValue);
+            histogram.addValue(functionPanel.getValue(normalizedIntensity) * intensityMaxValue);
         }
 
         return histogram;
