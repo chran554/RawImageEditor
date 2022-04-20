@@ -12,13 +12,14 @@ import java.awt.RenderingHints;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ImagePanel extends JPanel implements MouseMotionListener, MouseListener {
 
     private final List<MousePositionListener> mousePositionListeners = new ArrayList<>();
-    private Image image = null;
+    private BufferedImage image = null;
 
     private int scaledImageWidth;
     private int scaledImageHeight;
@@ -61,10 +62,14 @@ public class ImagePanel extends JPanel implements MouseMotionListener, MouseList
         graphics2D.dispose();
     }
 
-    public void setImage(Image image) {
+    public void setImage(BufferedImage image) {
         this.image = image;
         setPreferredSize(new Dimension(image.getWidth(null), image.getHeight(null)));
         repaint();
+    }
+
+    public BufferedImage getImage() {
+        return this.image;
     }
 
     public interface MousePositionListener {

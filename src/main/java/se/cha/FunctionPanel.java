@@ -20,7 +20,7 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
 
     private final List<FunctionChangedListener> listeners = new ArrayList<>();
     private final SplineFunction function;
-    private Image backgroundImage = null;
+    private BackgroundImageProducer backgroundImageProducer = null;
 
     public FunctionPanel(SplineFunction function) {
         super();
@@ -44,8 +44,8 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
         return function.getValue(x);
     }
 
-    public void setBackgroundImage(Image backgroundImage) {
-        this.backgroundImage = backgroundImage;
+    public void setBackgroundImageProducer(BackgroundImageProducer backgroundImageProducer) {
+        this.backgroundImageProducer = backgroundImageProducer;
     }
 
     @Override
@@ -64,8 +64,9 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
         //graphics2D.setColor(Color.RED);
         //graphics2D.drawRect(0, 0, width - 1, height - 1);
 
-        if (backgroundImage != null) {
-            graphics2D.drawImage(backgroundImage, 0, 0, width, height, null);
+        if (backgroundImageProducer != null) {
+            final Image image = backgroundImageProducer.getBackgroundImage(width, height);
+            graphics2D.drawImage(image, 0, 0, width, height, null);
         }
 
         // Draw spline curve
@@ -341,5 +342,9 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
 
     public void removeHighlightPosition() {
         highlightPosition = -Double.MAX_VALUE;
+    }
+
+    public interface BackgroundImageProducer {
+        Image getBackgroundImage(int width, int height);
     }
 }

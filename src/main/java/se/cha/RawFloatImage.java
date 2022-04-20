@@ -3,8 +3,10 @@ package se.cha;
 import java.awt.image.BufferedImage;
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.stream.IntStream;
 
 public class RawFloatImage {
     private int width;
@@ -13,15 +15,25 @@ public class RawFloatImage {
     private double[] r;
     private double[] g;
     private double[] b;
+    private double[] intensityLstarNormalized; // Intensity values CIE 1931 L*
 
     private double intensityMinValue;
     private double intensityMaxValue;
     private double channelMaxValue;
 
+    private Histogram intensityHistogram = null;
+
     private BufferedImage image;
 
+    public void loadFile(File file) throws IOException {
+        loadFile(new FileInputStream(file));
+    }
     public void loadFile(String filename) throws IOException {
         final FileInputStream fileInputStream = new FileInputStream(filename);
+        loadFile(fileInputStream);
+    }
+
+    private void loadFile(FileInputStream fileInputStream) throws IOException {
         final DataInputStream dis = new DataInputStream(new BufferedInputStream(fileInputStream));
 
         final int majorVersion = dis.readInt();
@@ -53,12 +65,15 @@ public class RawFloatImage {
         this.channelMaxValue = tmpChannelMax;
 
         this.image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        this.intensityHistogram = null;
 
-        // Find min and max intensity values
+        // Calculate pixel intensities. Find min and max intensity values
+        this.intensityLstarNormalized = new double[amountPixels];
         double tmpIntensityMin = Double.MAX_VALUE;
         double tmpIntensityMax = -(Double.MAX_VALUE - 1);
         for (int pixelIndex = 0; pixelIndex < amountPixels; pixelIndex++) {
-            final double pixelIntensity = getIntensityValue(pixelIndex);
+            final double pixelIntensity = calculateIntensityValue(pixelIndex);
+            intensityLstarNormalized[pixelIndex] = pixelIntensity;
             tmpIntensityMin = Math.min(tmpIntensityMin, pixelIntensity);
             tmpIntensityMax = Math.max(tmpIntensityMax, pixelIntensity);
         }
@@ -70,13 +85,15 @@ public class RawFloatImage {
         final int amountPixels = width * height;
         final int[] pixels = new int[amountPixels];
 
+        final double conversionConstant = 256.0 / channelMaxValue;
+
         for (int pixelIndex = 0; pixelIndex < amountPixels; pixelIndex++) {
             final double pixelIntensityFactor = getPixelIntensityFactor(pixelIndex, functionPanel);
 
             // Perceptive linear scaling of RGB channels according to pixel intensity (using CIE 1931 Lstar scale)
-            final int rValue = (int) clamp(0.0, 255.0, 256.0 * pixelIntensityFactor * r[pixelIndex] / channelMaxValue);
-            final int gValue = (int) clamp(0.0, 255.0, 256.0 * pixelIntensityFactor * g[pixelIndex] / channelMaxValue);
-            final int bValue = (int) clamp(0.0, 255.0, 256.0 * pixelIntensityFactor * b[pixelIndex] / channelMaxValue);
+            final int rValue = (int) clamp(0.0, 255.0, pixelIntensityFactor * r[pixelIndex] * conversionConstant);
+            final int gValue = (int) clamp(0.0, 255.0, pixelIntensityFactor * g[pixelIndex] * conversionConstant);
+            final int bValue = (int) clamp(0.0, 255.0, pixelIntensityFactor * b[pixelIndex] * conversionConstant);
 
             pixels[pixelIndex] = 0xFF000000 | (rValue << 16) | (gValue << 8) | (bValue << 0);
         }
@@ -114,38 +131,28 @@ public class RawFloatImage {
     }
 
     public Histogram getIntensityHistogram(int amountBoxes) {
-        final Histogram histogram = new Histogram(amountBoxes, 0.0, intensityMaxValue);
-
-        final int amountPixels = width * height;
-        for (int pixelIndex = 0; pixelIndex < amountPixels; pixelIndex++) {
-            // Intensity histogram, RGB channels weighted by eye color sensitivity
-            histogram.addValue(getIntensityValue(pixelIndex));
-
-            // Average of RGB channels
-//            histogram.addValue((r[pixelIndex] + g[pixelIndex] + b[pixelIndex]) / 3.0);
-
-            // Separate values for each RGB channel
-//            histogram.addValue(r[pixelIndex]);
-//            histogram.addValue(g[pixelIndex]);
-//            histogram.addValue(b[pixelIndex]);
+        if ((intensityHistogram == null) || (intensityHistogram.getAmountBoxes() != amountBoxes)) {
+            intensityHistogram = new Histogram(amountBoxes, 0.0, intensityMaxValue);
+            IntStream.range(0, width * height).forEach(pixelIndex -> intensityHistogram.addValue(getIntensityValue(pixelIndex)));
         }
 
-        return histogram;
+        return intensityHistogram;
     }
 
     public Histogram getIntensityHistogram(int amountBoxes, FunctionPanel functionPanel) {
         final Histogram histogram = new Histogram(amountBoxes, 0.0, intensityMaxValue);
 
+        final double intensityMaxValueInv = 1.0 / intensityMaxValue;
         final int amountPixels = width * height;
         for (int pixelIndex = 0; pixelIndex < amountPixels; pixelIndex++) {
-            final double normalizedIntensity = getIntensityValue(pixelIndex) / intensityMaxValue;
+            final double normalizedIntensity = getIntensityValue(pixelIndex) * intensityMaxValueInv;
             histogram.addValue(functionPanel.getValue(normalizedIntensity) * intensityMaxValue);
         }
 
         return histogram;
     }
 
-    double getIntensityValue(int pixelIndex) {
+    double calculateIntensityValue(int pixelIndex) {
         final double Ymax = 100.0;
         final double luminanceYforsRGB = Cie.sRGBtoYluminance(
                 r[pixelIndex] / channelMaxValue,
@@ -154,16 +161,15 @@ public class RawFloatImage {
         return Cie.YtoLstar2(luminanceYforsRGB) / Ymax;
     }
 
-/*
-    double getIntensityValue2(int pixelIndex) {
-        return r[pixelIndex] * 0.11 + g[pixelIndex] * 0.59 + b[pixelIndex] * 0.30;
+    double getIntensityValue(int pixelIndex) {
+        return intensityLstarNormalized[pixelIndex];
     }
-*/
-
 
     public double getIntensityValue(int x, int y) {
         if ((x < 0) || (x >= width) || (y < 0) || (y >= height)) {
-            throw new IllegalArgumentException("Can't get pixel intensity outside image bounds {x:0-" + (width - 1) + ", y:0-" + (height - 1) + "}. Requested {x:" + x + ", y:" + y + "}");
+            System.err.println("Can't get pixel intensity outside image bounds {x:0-" + (width - 1) + ", y:0-" + (height - 1) + "}. Requested {x:" + x + ", y:" + y + "}");
+            x = Math.max(0, Math.min(x, width -1));
+            y = Math.max(0, Math.min(x, height -1));
         }
 
         return getIntensityValue(y * width + x);
