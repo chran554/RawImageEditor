@@ -19,7 +19,7 @@ import static java.awt.GridBagConstraints.NORTHWEST;
 public class RawImageEditor extends JFrame {
 
     public static void main(String[] args) {
-        System.out.println("Spline test running...");
+        System.out.println("Running raw image editor...");
 
         // Run the GUI codes on the Event-Dispatching thread for thread safety
         SwingUtilities.invokeLater(new Runnable() {
@@ -92,7 +92,7 @@ public class RawImageEditor extends JFrame {
                             originalHistogramImageCache.invalidate();
                             combinedHistogramImageCache.invalidate();
 
-                            frame.pack();
+                            // frame.pack();
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -128,20 +128,29 @@ public class RawImageEditor extends JFrame {
                 outputLabel.setForeground(Color.RED.darker());
                 final JPanel informationPanel = new JPanel(new GridBagLayout());
                 informationPanel.setBorder(new TitledBorder("Intensity information"));
-                informationPanel.add(inputLabel, new GridBagConstraints(0,0,1,1,1,0, NORTHWEST, HORIZONTAL, noInsets, 0,5));
-                informationPanel.add(outputLabel, new GridBagConstraints(0,1,1,1,1,0, NORTHWEST, HORIZONTAL, noInsets, 0,5));
+                informationPanel.add(inputLabel, new GridBagConstraints(0, 0, 1, 1, 1, 0, NORTHWEST, HORIZONTAL, noInsets, 0, 5));
+                informationPanel.add(outputLabel, new GridBagConstraints(0, 1, 1, 1, 1, 0, NORTHWEST, HORIZONTAL, noInsets, 0, 5));
 
                 int rowIndex = 0;
-                rightColumn.add(functionPanel, new GridBagConstraints(0,rowIndex++, 1,1, 1, 0, NORTHWEST, HORIZONTAL, noInsets, 0, 0));
-                rightColumn.add(histogramCheckBox, new GridBagConstraints(0,rowIndex++, 1,1, 1, 0, NORTHWEST, HORIZONTAL, noInsets, 0, 20));
-                rightColumn.add(informationPanel, new GridBagConstraints(0,rowIndex++, 1,1, 1, 0, NORTHWEST, HORIZONTAL, noInsets, 0, 20));
-                rightColumn.add(loadButton, new GridBagConstraints(0,rowIndex++, 1,1, 1, 0, NORTHWEST, HORIZONTAL, noInsets, 0, 0));
-                rightColumn.add(saveButton, new GridBagConstraints(0,rowIndex++, 1,1, 1, 0, NORTHWEST, HORIZONTAL, noInsets, 0, 0));
-                rightColumn.add(new JPanel(), new GridBagConstraints(0,rowIndex++, 1,1, 1, 1, NORTHWEST, HORIZONTAL, noInsets, 0, 0));
+                rightColumn.add(functionPanel, new GridBagConstraints(0, rowIndex++, 1, 1, 1, 0, NORTHWEST, HORIZONTAL, noInsets, 0, 0));
+                rightColumn.add(histogramCheckBox, new GridBagConstraints(0, rowIndex++, 1, 1, 1, 0, NORTHWEST, HORIZONTAL, noInsets, 0, 20));
+                rightColumn.add(informationPanel, new GridBagConstraints(0, rowIndex++, 1, 1, 1, 0, NORTHWEST, HORIZONTAL, noInsets, 0, 20));
+                rightColumn.add(loadButton, new GridBagConstraints(0, rowIndex++, 1, 1, 1, 0, NORTHWEST, HORIZONTAL, noInsets, 0, 0));
+                rightColumn.add(saveButton, new GridBagConstraints(0, rowIndex++, 1, 1, 1, 0, NORTHWEST, HORIZONTAL, noInsets, 0, 0));
+                rightColumn.add(new JPanel(), new GridBagConstraints(0, rowIndex, 1, 1, 1, 1, NORTHWEST, HORIZONTAL, noInsets, 0, 0));
 
                 frame.add(imageBorder, BorderLayout.CENTER);
                 frame.add(rightColumn, BorderLayout.EAST);
                 frame.pack();
+
+                final GraphicsEnvironment env = GraphicsEnvironment.getLocalGraphicsEnvironment();
+                final Rectangle maximumWindowBounds = env.getMaximumWindowBounds();
+                final Dimension preferredSize = frame.getPreferredSize();
+
+                final int width = Math.min(Math.max(preferredSize.width, 800), (int) (maximumWindowBounds.width * 0.8));
+                final int height = Math.min(Math.max(preferredSize.height, 600), (int) (maximumWindowBounds.height * 0.8));
+                frame.setSize(new Dimension(width, height));
+
                 frame.setVisible(true);
             }
 
@@ -182,8 +191,8 @@ public class RawImageEditor extends JFrame {
 
                 if (!combinedHistogramImageCache.valid() || !combinedHistogramImageCache.boundsMatch(width, height)) {
                     final Graphics2D g = combinedHistogramImageCache.createImage(width, height);
-                    g.drawImage(outputHistogramImageCache.getCachedImage(), 0,0, null);
-                    g.drawImage(originalHistogramImageCache.getCachedImage(), 0,0, null);
+                    g.drawImage(outputHistogramImageCache.getCachedImage(), 0, 0, null);
+                    g.drawImage(originalHistogramImageCache.getCachedImage(), 0, 0, null);
                     g.dispose();
                 }
 
@@ -192,7 +201,7 @@ public class RawImageEditor extends JFrame {
 
             private void drawHistogramImage(Histogram histogram, int width, int height, Graphics2D g, Color fillColor, Color lineColor) {
                 final double[] histogramValue = new double[width];
-                IntStream.range(0, width).forEach(pixelX  -> histogramValue[pixelX] = Math.pow(histogram.getValueRGB(pixelX), 0.25));
+                IntStream.range(0, width).forEach(pixelX -> histogramValue[pixelX] = Math.pow(histogram.getValueRGB(pixelX), 0.25));
 
                 g.setColor(fillColor);
                 for (int pixelX = 0; pixelX < width; pixelX++) {
@@ -200,7 +209,7 @@ public class RawImageEditor extends JFrame {
                 }
                 g.setColor(lineColor);
                 for (int pixelX = 1; pixelX < width; pixelX++) {
-                    g.drawLine(pixelX -1 , height - (int) (histogramValue[pixelX-1] * height), pixelX, height - (int) (histogramValue[pixelX] * height));
+                    g.drawLine(pixelX - 1, height - (int) (histogramValue[pixelX - 1] * height), pixelX, height - (int) (histogramValue[pixelX] * height));
                 }
             }
         });

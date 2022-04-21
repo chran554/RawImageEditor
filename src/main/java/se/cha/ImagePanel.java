@@ -3,12 +3,7 @@ package se.cha;
 import se.cha.function.Point;
 
 import javax.swing.*;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.Image;
-import java.awt.RenderingHints;
+import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
@@ -64,7 +59,9 @@ public class ImagePanel extends JPanel implements MouseMotionListener, MouseList
 
     public void setImage(BufferedImage image) {
         this.image = image;
-        setPreferredSize(new Dimension(image.getWidth(null), image.getHeight(null)));
+        if (image != null) {
+            setPreferredSize(new Dimension(image.getWidth(null), image.getHeight(null)));
+        }
         repaint();
     }
 

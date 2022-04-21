@@ -25,6 +25,19 @@ public class RawFloatImage {
 
     private BufferedImage image;
 
+    public void clear() {
+        width = -1;
+        height = -1;
+        image = null;
+        intensityHistogram = null;
+        r = new double[] {};
+        g = new double[] {};
+        b = new double[] {};
+        intensityMaxValue = -Double.MAX_VALUE;
+        intensityMinValue = Double.MAX_VALUE;
+        channelMaxValue = -Double.MAX_VALUE;
+    }
+
     public void loadFile(File file) throws IOException {
         loadFile(new FileInputStream(file));
     }
@@ -82,23 +95,26 @@ public class RawFloatImage {
     }
 
     public BufferedImage getImage(FunctionPanel functionPanel) {
-        final int amountPixels = width * height;
-        final int[] pixels = new int[amountPixels];
+        if (image != null) {
+            final int amountPixels = width * height;
+            final int[] pixels = new int[amountPixels];
 
-        final double conversionConstant = 256.0 / channelMaxValue;
+            final double conversionConstant = 256.0 / channelMaxValue;
 
-        for (int pixelIndex = 0; pixelIndex < amountPixels; pixelIndex++) {
-            final double pixelIntensityFactor = getPixelIntensityFactor(pixelIndex, functionPanel);
+            for (int pixelIndex = 0; pixelIndex < amountPixels; pixelIndex++) {
+                final double pixelIntensityFactor = getPixelIntensityFactor(pixelIndex, functionPanel);
 
-            // Perceptive linear scaling of RGB channels according to pixel intensity (using CIE 1931 Lstar scale)
-            final int rValue = (int) clamp(0.0, 255.0, pixelIntensityFactor * r[pixelIndex] * conversionConstant);
-            final int gValue = (int) clamp(0.0, 255.0, pixelIntensityFactor * g[pixelIndex] * conversionConstant);
-            final int bValue = (int) clamp(0.0, 255.0, pixelIntensityFactor * b[pixelIndex] * conversionConstant);
+                // Perceptive linear scaling of RGB channels according to pixel intensity (using CIE 1931 Lstar scale)
+                final int rValue = (int) clamp(0.0, 255.0, pixelIntensityFactor * r[pixelIndex] * conversionConstant);
+                final int gValue = (int) clamp(0.0, 255.0, pixelIntensityFactor * g[pixelIndex] * conversionConstant);
+                final int bValue = (int) clamp(0.0, 255.0, pixelIntensityFactor * b[pixelIndex] * conversionConstant);
 
-            pixels[pixelIndex] = 0xFF000000 | (rValue << 16) | (gValue << 8) | (bValue << 0);
+                pixels[pixelIndex] = 0xFF000000 | (rValue << 16) | (gValue << 8) | (bValue << 0);
+            }
+
+            image.setRGB(0, 0, width, height, pixels, 0, width);
         }
 
-        image.setRGB(0, 0, width, height, pixels, 0, width);
         return image;
     }
 
