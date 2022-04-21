@@ -51,5 +51,11 @@ func WriteRawImage(image *FloatImage) {
 
     binary.Write(&byteBuffer, binary.BigEndian, image.pixels)
 }
+
+func writeBinaryInt32(buffer *bytes.Buffer, value int32) {
+	if err := binary.Write(buffer, binary.BigEndian, value); err != nil {
+		fmt.Println(err)
+	}
+}
 ----
 
