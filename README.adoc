@@ -3,13 +3,13 @@
 A raw file "editor" for my own raw image file format.
 
 .PNG image of a Cornellbox as produced by path tracer using ordinary RGB clamping of color values.
-image::documentation/images/cornellbox_ordinary_clamp_of_rgb.png[Overexposed image as produced by pathtracer]
+image::documentation/images/cornellbox_ordinary_clamp_of_rgb.png[alt=Overexposed image as produced by pathtracer,width=50%,height=50%]
 
 .Imported raw image file for the cornellbox in image editor before editing.
-image::documentation/images/ui_notedited.png[Not edited raw file]
+image::documentation/images/ui_notedited.png[alt=Not edited raw file,width=50%,height=50%]
 
 .Imported raw image file for the cornellbox in image editor after brightness adjustment using response curve (with histogram support) .
-image::documentation/images/ui_edited.png[Adjusted brightness using histogram curve]
+image::documentation/images/ui_edited.png[alt=Adjusted brightness using histogram curve,width=50%,height=50%]
 
 ## Raw image file format
 
