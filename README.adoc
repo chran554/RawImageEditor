@@ -2,6 +2,13 @@
 
 A raw file "editor" for my own raw image file format.
 
+Instead of trying to fix and adjust lights in the path tracing scene to fit neatly in the 8bit (0, 255) range for pixel color channels red, green, and blue respectively.
+I decided to save raw image files with 32bit float values for R, G, and B channels. Keeping the full, or at least a whooping lot better, dynamic intensity range for all rendered pixels.
+
+The images are later post edited in this raw image editor to extract and enhance the wanted tonal range for the image.
+
+It saves a lot of trial and error rendering of 3D scenes as I can just focus on the relative emission output between the lights rather than doing that AND trim them to a perfect exposure fitting for the output 8bit (not so) dynamic range.
+
 .PNG image of a Cornellbox as produced by path tracer using ordinary RGB clamping of color values.
 image::documentation/images/cornellbox_ordinary_clamp_of_rgb.png[alt=Overexposed image as produced by pathtracer,width=50%,height=50%]
 
