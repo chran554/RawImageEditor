@@ -20,12 +20,17 @@ public class SplineFunction implements Point.PointChangedListener {
     private boolean splineUpToDate = false;
 
     public SplineFunction() {
+        reset();
+    }
+
+    public void reset() {
+        final List<Point> points = new ArrayList<>();
         // 3 default control points
         points.add(new Point(0.00, 0.00, this));
         points.add(new Point(0.50, 0.50, this));
         points.add(new Point(1.00, 1.00, this));
-        Collections.sort(this.points);
-        splineUpToDate = false;
+
+        replacePoints(points);
     }
 
     public void addPoint(Point point) {

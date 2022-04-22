@@ -36,6 +36,10 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
         function.addPoint(point);
     }
 
+    public void reset() {
+        function.reset();
+    }
+
     public void removePoint(se.cha.function.Point point) {
         function.removePoint(point);
     }
@@ -325,6 +329,7 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
     @Override
     public void functionChanged() {
         notifyFunctionChangedListeners();
+        repaint();
     }
 
     public interface FunctionChangedListener {

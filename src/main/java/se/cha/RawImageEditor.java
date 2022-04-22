@@ -84,10 +84,14 @@ public class RawImageEditor extends JFrame {
                             final int result = fileChooser.showDialog(imagePanel, "Load");
 
                             if (result == JFileChooser.APPROVE_OPTION) {
-                                rawFloatImage.loadFile(fileChooser.getSelectedFile());
+                                final File selectedFile = fileChooser.getSelectedFile();
+                                rawFloatImage.loadFile(selectedFile);
                                 imagePanel.setImage(rawFloatImage.getImage(functionPanel));
+
+                                frame.setTitle(selectedFile.getName());
                             }
 
+                            functionPanel.reset();
                             outputHistogramImageCache.invalidate();
                             originalHistogramImageCache.invalidate();
                             combinedHistogramImageCache.invalidate();
