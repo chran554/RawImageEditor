@@ -15,7 +15,7 @@ public class RawFloatImage {
     private double[] r;
     private double[] g;
     private double[] b;
-    private double[] intensityLstarNormalized; // Intensity values CIE 1931 L*
+    private double[] intensityLstar; // Intensity values CIE 1931 L*
 
     private double intensityMinValue;
     private double intensityMaxValue;
@@ -36,6 +36,10 @@ public class RawFloatImage {
         intensityMaxValue = -Double.MAX_VALUE;
         intensityMinValue = Double.MAX_VALUE;
         channelMaxValue = -Double.MAX_VALUE;
+    }
+
+    public boolean isValid() {
+        return image != null;
     }
 
     public void loadFile(File file) throws IOException {
@@ -81,12 +85,12 @@ public class RawFloatImage {
         this.intensityHistogram = null;
 
         // Calculate pixel intensities. Find min and max intensity values
-        this.intensityLstarNormalized = new double[amountPixels];
+        this.intensityLstar = new double[amountPixels];
         double tmpIntensityMin = Double.MAX_VALUE;
         double tmpIntensityMax = -(Double.MAX_VALUE - 1);
         for (int pixelIndex = 0; pixelIndex < amountPixels; pixelIndex++) {
-            final double pixelIntensity = calculateIntensityValue(pixelIndex);
-            intensityLstarNormalized[pixelIndex] = pixelIntensity;
+            final double pixelIntensity = calculateLstarIntensityValue(pixelIndex);
+            intensityLstar[pixelIndex] = pixelIntensity;
             tmpIntensityMin = Math.min(tmpIntensityMin, pixelIntensity);
             tmpIntensityMax = Math.max(tmpIntensityMax, pixelIntensity);
         }
@@ -125,11 +129,11 @@ public class RawFloatImage {
                 r[pixelIndex] / channelMaxValue,
                 g[pixelIndex] / channelMaxValue,
                 b[pixelIndex] / channelMaxValue);
-        final double originalLstarIntensity = Cie.YtoLstar2(originalYluminance) / Ymax;
+        final double originalLstarIntensity = Cie.YtoLstar2(originalYluminance);
         final double originalNormalizedLstarIntensity = originalLstarIntensity / intensityMaxValue;
         final double newNormalizedLstarIntensity = functionPanel.getValue(originalNormalizedLstarIntensity);
         final double newLstarIntensity = newNormalizedLstarIntensity * intensityMaxValue;
-        final double newYLuminance = Cie.LstarToY2(newLstarIntensity) * Ymax;
+        final double newYLuminance = Cie.LstarToY2(newLstarIntensity);
 
         return newYLuminance / originalYluminance;
     }
@@ -168,17 +172,16 @@ public class RawFloatImage {
         return histogram;
     }
 
-    double calculateIntensityValue(int pixelIndex) {
-        final double Ymax = 100.0;
+    double calculateLstarIntensityValue(int pixelIndex) {
         final double luminanceYforsRGB = Cie.sRGBtoYluminance(
                 r[pixelIndex] / channelMaxValue,
                 g[pixelIndex] / channelMaxValue,
                 b[pixelIndex] / channelMaxValue);
-        return Cie.YtoLstar2(luminanceYforsRGB) / Ymax;
+        return Cie.YtoLstar2(luminanceYforsRGB);
     }
 
     double getIntensityValue(int pixelIndex) {
-        return intensityLstarNormalized[pixelIndex];
+        return intensityLstar[pixelIndex];
     }
 
     public double getIntensityValue(int x, int y) {

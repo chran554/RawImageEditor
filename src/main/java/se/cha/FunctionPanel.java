@@ -1,24 +1,32 @@
 package se.cha;
 
+import lombok.Value;
 import se.cha.function.SplineFunction;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
 public class FunctionPanel extends JPanel implements MouseListener, MouseMotionListener, SplineFunction.FunctionChangedListener {
 
     private static final double PIXEL_CLOSE_RADIUS = 7.0;
+    private static final int CONTROL_POINT_WIDTH = 4;
 
     private se.cha.function.Point dragPoint = null;
     private java.awt.Point mousePosition;
     private double highlightPosition;
 
-    private final List<FunctionChangedListener> listeners = new ArrayList<>();
+    private final List<FunctionChangedListener> functionChangedListeners = new ArrayList<>();
+    private final List<CurrentValueListener> currentValueListeners = new ArrayList<>();
+
     private final SplineFunction function;
     private BackgroundImageProducer backgroundImageProducer = null;
 
@@ -28,8 +36,21 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
         this.function = function;
         function.addFunctionChangedListener(this);
 
+        try {
+            final InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("cross.png");
+            final BufferedImage crossHairCursorImage = ImageIO.read(inputStream);
+            final Cursor hairCrossCursor = Toolkit.getDefaultToolkit().createCustomCursor(
+                    crossHairCursorImage,
+                    new Point(10, 10),
+                    "hair cross cursor");
+            setCursor(hairCrossCursor);
+        } catch (IOException e) {
+            setCursor(new Cursor(Cursor.CROSSHAIR_CURSOR));
+        }
+
         addMouseListener(this);
         addMouseMotionListener(this);
+        setMinimumSize(new Dimension(100, 75));
     }
 
     public void addPoint(se.cha.function.Point point) {
@@ -91,14 +112,17 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
         // Draw highlighted position
         graphics2D.setColor(new Color(255, 128, 128, 128));
         drawHighlightPosition(graphics2D, width, height);
+        if ((backgroundImageProducer != null) && (highlightPosition != -Double.MAX_VALUE)) {
+            final double x = highlightPosition;
+            final Image image = backgroundImageProducer.getForegroundImage(width, height, x);
+            graphics2D.drawImage(image, 0, 0, width, height, null);
+        }
 
         // Draw cross-hair
-        graphics2D.setColor(new Color(128, 196, 196, 128));
-        drawCrossHair(graphics2D, width, height);
+        // drawMousePosition(graphics2D, width, height);
 
         // Draw spline curve control points
-        graphics2D.setColor(Color.WHITE);
-        drawControlPoints(graphics2D, width, height);
+        drawControlPoints(graphics2D, width, height, Color.WHITE, Color.RED);
 
         graphics2D.dispose();
     }
@@ -106,17 +130,17 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
     private void drawHighlightPosition(Graphics2D graphics2D, int width, int height) {
         if (highlightPosition != -Double.MAX_VALUE) {
             final double x = highlightPosition;
-            final double y = getValue(x);
+            //final double y = getValue(x);
             final int pixelX = (int) Math.round(width * x);
-            final int pixelY = (int) Math.round(height * (1.0 - y));
+            //final int pixelY = (int) Math.round(height * (1.0 - y));
 
-            graphics2D.fillOval(pixelX - 2, pixelY - 2, 4, 4);
-            graphics2D.drawLine(0, pixelY, pixelX, pixelY);
+            graphics2D.setColor(new Color(128, 196, 196, 128));
+            // graphics2D.fillOval(pixelX - (CONTROL_POINT_WIDTH / 2), pixelY - (CONTROL_POINT_WIDTH / 2), CONTROL_POINT_WIDTH, CONTROL_POINT_WIDTH);
             graphics2D.drawLine(pixelX, 0, pixelX, height);
         }
     }
 
-    private void drawCrossHair(Graphics2D graphics2D, int width, int height) {
+    private void drawMousePosition(Graphics2D graphics2D, int width, int height) {
         if (mousePosition != null) {
             final double x = mousePosition.x / (1.0 * width);
             final double y = getValue(x);
@@ -124,7 +148,6 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
             final int pixelY = (int) Math.round(height * (1.0 - y));
 
             graphics2D.fillOval(pixelX - 2, pixelY - 2, 4, 4);
-            graphics2D.drawLine(0, pixelY, pixelX, pixelY);
             graphics2D.drawLine(pixelX, 0, pixelX, height);
         }
     }
@@ -155,9 +178,11 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
         graphics2D.drawLine(pixelStartXEndLine, pixelYEndLine, pixelEndXEndLine, pixelYEndLine);
     }
 
-    private void drawControlPoints(Graphics2D graphics2D, int width, int height) {
+    private void drawControlPoints(Graphics2D graphics2D, int width, int height, Color color, Color draggedColor) {
+        final int halfcontrolPointWidth = CONTROL_POINT_WIDTH / 2;
         for (se.cha.function.Point point : function.getPoints()) {
-            graphics2D.fillOval((int) Math.round(point.getX() * width) - 1, height - (int) Math.round(point.getY() * height) - 1, 3, 3);
+            graphics2D.setColor(point == dragPoint ? draggedColor : color);
+            graphics2D.fillOval((int) Math.round(point.getX() * width) - halfcontrolPointWidth, height - (int) Math.round(point.getY() * height) - halfcontrolPointWidth, CONTROL_POINT_WIDTH, CONTROL_POINT_WIDTH);
         }
     }
 
@@ -266,18 +291,21 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
     @Override
     public void mouseEntered(MouseEvent mouseEvent) {
         mousePosition = mouseEvent.getPoint();
+        notifyCurrentValueListeners();
         repaint();
     }
 
     @Override
     public void mouseExited(MouseEvent mouseEvent) {
         mousePosition = null;
+        notifyCurrentValueListeners();
         repaint();
     }
 
     @Override
     public void mouseDragged(MouseEvent mouseEvent) {
         mousePosition = mouseEvent.getPoint();
+        notifyCurrentValueListeners();
 
         if (dragPoint != null) {
             final double newX = clamp(mouseEvent.getX() / (1.0 * getWidth()), 0.0, 1.0);
@@ -305,6 +333,7 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
     @Override
     public void mouseMoved(MouseEvent mouseEvent) {
         mousePosition = mouseEvent.getPoint();
+        notifyCurrentValueListeners();
         repaint();
     }
 
@@ -313,17 +342,17 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
     }
 
     private void notifyFunctionChangedListeners() {
-        for (FunctionChangedListener listener : listeners) {
+        for (FunctionChangedListener listener : functionChangedListeners) {
             listener.functionChanged();
         }
     }
 
     public void addFunctionChangedListener(FunctionChangedListener listener) {
-        listeners.add(listener);
+        functionChangedListeners.add(listener);
     }
 
     public boolean removeFunctionChangedListener(FunctionChangedListener listener) {
-        return listeners.remove(listener);
+        return functionChangedListeners.remove(listener);
     }
 
     @Override
@@ -334,6 +363,36 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
 
     public interface FunctionChangedListener {
         void functionChanged();
+    }
+
+    private void notifyCurrentValueListeners() {
+        if (mousePosition != null) {
+            final double originalNormalizedIntensity = mousePosition.x / (1.0 * (getWidth() - 1));
+            final double outputNormalizedIntensity = getValue(originalNormalizedIntensity);
+            final CurrentValueEvent currentValueEvent = new CurrentValueEvent(originalNormalizedIntensity, outputNormalizedIntensity);
+
+            notifyCurrentValueListeners(currentValueEvent);
+        } else {
+            notifyCurrentValueListeners(null);
+        }
+    }
+
+    private void notifyCurrentValueListeners(CurrentValueEvent event) {
+        for (CurrentValueListener listener : currentValueListeners) {
+            listener.currentValueChanged(event);
+        }
+    }
+
+    public void addCurrentValueListener(CurrentValueListener listener) {
+        currentValueListeners.add(listener);
+    }
+
+    public boolean removeCurrentValueListener(CurrentValueListener listener) {
+        return currentValueListeners.remove(listener);
+    }
+
+    public interface CurrentValueListener {
+        void currentValueChanged(CurrentValueEvent event);
     }
 
     public void setHighlightPosition(double x) {
@@ -351,5 +410,13 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
 
     public interface BackgroundImageProducer {
         Image getBackgroundImage(int width, int height);
+
+        Image getForegroundImage(int width, int height, double x);
+    }
+
+    @Value
+    public static class CurrentValueEvent {
+        double inputValue;
+        double outputValue;
     }
 }

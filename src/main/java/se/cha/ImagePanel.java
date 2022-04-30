@@ -1,7 +1,5 @@
 package se.cha;
 
-import se.cha.function.Point;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseEvent;
@@ -22,6 +20,8 @@ public class ImagePanel extends JPanel implements MouseMotionListener, MouseList
     public ImagePanel() {
         addMouseListener(this);
         addMouseMotionListener(this);
+
+        setPreferredSize(new Dimension(400, 300));
     }
 
     @Override
@@ -61,6 +61,8 @@ public class ImagePanel extends JPanel implements MouseMotionListener, MouseList
         this.image = image;
         if (image != null) {
             setPreferredSize(new Dimension(image.getWidth(null), image.getHeight(null)));
+        } else {
+            setPreferredSize(new Dimension(400, 300));
         }
         repaint();
     }
@@ -70,10 +72,10 @@ public class ImagePanel extends JPanel implements MouseMotionListener, MouseList
     }
 
     public interface MousePositionListener {
-        void mousePositionChanged(Point point);
+        void mousePositionChanged(java.awt.Point point);
     }
 
-    private void notifyMousePositionListeners(Point point) {
+    private void notifyMousePositionListeners(java.awt.Point point) {
         for (final MousePositionListener mousePositionListener : mousePositionListeners) {
             mousePositionListener.mousePositionChanged(point);
         }
@@ -89,13 +91,13 @@ public class ImagePanel extends JPanel implements MouseMotionListener, MouseList
 
     @Override
     public void mouseDragged(MouseEvent mouseEvent) {
-        final Point mousePositionPoint = getMousePositionPoint(mouseEvent);
+        final java.awt.Point mousePositionPoint = getMousePositionPoint(mouseEvent);
         notifyMousePositionListeners(mousePositionPoint);
     }
 
     @Override
     public void mouseMoved(MouseEvent mouseEvent) {
-        final Point mousePositionPoint = getMousePositionPoint(mouseEvent);
+        final java.awt.Point mousePositionPoint = getMousePositionPoint(mouseEvent);
         notifyMousePositionListeners(mousePositionPoint);
     }
 
@@ -116,7 +118,7 @@ public class ImagePanel extends JPanel implements MouseMotionListener, MouseList
 
     @Override
     public void mouseEntered(MouseEvent mouseEvent) {
-        final Point mousePositionPoint = getMousePositionPoint(mouseEvent);
+        final java.awt.Point mousePositionPoint = getMousePositionPoint(mouseEvent);
         notifyMousePositionListeners(mousePositionPoint);
     }
 
@@ -125,19 +127,25 @@ public class ImagePanel extends JPanel implements MouseMotionListener, MouseList
         notifyMousePositionListeners(null);
     }
 
-    private Point getMousePositionPoint(MouseEvent mouseEvent) {
-        final int width = scaledImageWidth;
-        final int height = scaledImageHeight;
-
-        final java.awt.Point pixelPoint = mouseEvent.getPoint();
-
-        if (pixelPoint.y < height) {
-            final double normalizedX = pixelPoint.x / (1.0 * width);
-            final double normalizedY = pixelPoint.y / (1.0 * height);
-            return new Point(normalizedX, normalizedY);
-        } else {
+    private java.awt.Point getMousePositionPoint(MouseEvent mouseEvent) {
+        if (image == null) {
             return null;
         }
 
+        final int imageWidth = image.getWidth(null);
+        final int imageHeight = image.getHeight(null);
+
+        final int widthScaled = scaledImageWidth;
+        final int heightScaled = scaledImageHeight;
+
+        final java.awt.Point pixelPoint = mouseEvent.getPoint();
+
+        if ((pixelPoint.y < heightScaled) && (pixelPoint.x < widthScaled)) {
+            final double normalizedX = pixelPoint.x / (1.0 * (widthScaled - 1));
+            final double normalizedY = pixelPoint.y / (1.0 * (heightScaled - 1));
+            return new java.awt.Point((int) Math.round(normalizedX * imageWidth), (int) Math.round(normalizedY * imageHeight));
+        } else {
+            return null;
+        }
     }
 }

@@ -44,4 +44,12 @@ public class ImageCache {
     public boolean boundsMatch(int width, int height) {
         return (this.width == width) && (this.height == height);
     }
+
+    public boolean hasDimension(int width, int height) {
+        return valid() && (cachedImage.getWidth() == width) && (cachedImage.getHeight() == height);
+     }
+
+    public Graphics2D getImageGraphics() {
+        return (Graphics2D) getCachedImage().getGraphics();
+    }
 }

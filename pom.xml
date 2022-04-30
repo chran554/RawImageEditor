@@ -23,6 +23,14 @@
             <version>3.6.1</version>
         </dependency>
 
+        <!-- Flat LAF, look and feel for swing -->
+        <!-- https://www.formdev.com/flatlaf/ -->
+        <dependency>
+            <groupId>com.formdev</groupId>
+            <artifactId>flatlaf</artifactId>
+            <version>2.2</version>
+        </dependency>
+
         <!-- https://mvnrepository.com/artifact/junit/junit -->
         <dependency>
             <groupId>junit</groupId>
