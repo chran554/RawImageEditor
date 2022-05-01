@@ -1,0 +1,35 @@
+= Write FIMG files using Golang
+
+.RawImage file format (pseudo code in go lang)
+[source,go]
+----
+type Color struct{ R, G, B float32 }
+
+type FloatImage struct {
+    name   string
+    pixels []color.Color
+    Width  int
+    Height int
+}
+
+func WriteRawImage(image *FloatImage) {
+    var byteBuffer bytes.Buffer
+
+    fileFormatVersionMajor := 1
+    fileFormatVersionMinor := 0
+
+    writeBinaryInt32BigEndian(&byteBuffer, int32(fileFormatVersionMajor))
+    writeBinaryInt32BigEndian(&byteBuffer, int32(fileFormatVersionMinor))
+    writeBinaryInt32BigEndian(&byteBuffer, int32(image.Width))
+    writeBinaryInt32BigEndian(&byteBuffer, int32(image.Height))
+
+    binary.Write(&byteBuffer, binary.BigEndian, image.pixels)
+}
+
+func writeBinaryInt32(buffer *bytes.Buffer, value int32) {
+	if err := binary.Write(buffer, binary.BigEndian, value); err != nil {
+		fmt.Println(err)
+	}
+}
+----
+

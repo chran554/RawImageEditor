@@ -1,0 +1,68 @@
+= FIMG - The simple image file format with float values
+
+File suffix: `.fimg`
+
+== Status
+
+2022-05-01
+
+Version 2.0 is a specification work in progress... +
+This version of fimg will probably not be ready and see the day of light as it takes a big step from keeping things as simple as v1.0.
+
+Simplicity was more or less the main reason for the fimg file format. If you want complicated stuff then there are probably other file formats out there to make it complicated for you....
+
+== File format description
+Simple enough:
+
+.Image file header
+|===
+|Name |Data format |Description
+
+| Magic number |4 byte (32 bit in total) |The ASCII sequence `FIMG` for "Float IMaGe". +
+`0x46, 0x49, 0x4D, 0x47`
+
+|Major version |1 unsigned byte (8bit) |Current version value `2`.
+|Minor version |1 unsigned byte (8bit) |Current version value `0`.
+
+|Image width  |32bit big endian unsigned integer |in pixels
+|Image height |32bit big endian unsigned integer |in pixels
+
+| Amount color channels |1 byte | Usually `1` (for grayscale), `3` (for RGB), or `4` (for RGBA or CMYK)
+|Channel data stream configuration |1 byte |
+`0` = the channel data for each pixel is interleaved for each pixel in the data stream. I.e. example RGB image (R,G,B,R,G,B,R,G,B,...,R,G,B) +
+`1` = the channel data for each channel is stored complete channel chunks in the data stream after another. I.e. example RGB image (R,R,R,...,R,G,G,G,...,G,B,B,B,...,B)
+|===
+
+.Channel header. One or more blocks of channel headers (as many as specified by `Amount color channels`). The order of the channel headers is important.
+|===
+|Name |Data format |Description
+|Channel name |8 byte (64 bit in total) |Channel name or code in ASCII. +
+Reserved values are: +
+`RED`, `GREEN`, `BLUE`, and `ALPHA` for RGB red, green, and blue channels and alpha channel.
+`MONO` is reserved for monochrome (grayscale) image information. +
+`CYAN`, `YELLOW`, `MANGENTA`, and `BLACK` is reserved for CMYK images. +
+Unused trailing bytes of channel name are set to zero/null/`0x00`.
+|Value factor |32bit big endian float |Value to multiply to the every channel value read. If not applicable or used it is set to `1.0`.
+|Value offset |32bit big endian float |Value to add to the every channel value read (after factor multiplication). If not applicable or used it is set to `0.0`.
+|Lowest value |32bit big endian float |The lowest value in the channel. +
+This value is as the values are stored in the channel data and is subject to be calculated according to `Value factor` and `Value offset`.
+|Highest value |32bit big endian float |The highest value in the channel. +
+This value is as the values are stored in the channel data and is subject to be calculated according to `Value factor` and `Value offset`.
+|Lowest possible value |32bit big endian float |The lowest possible value in the channel. Should be equal or less than `Lowest value` field. +
+Used to set the 0% intensity or black level value. +
+This value is as the values are stored in the channel data and is subject to be calculated according to `Value factor` and `Value offset`.
+|Highest possible value |32bit big endian float |The highest possible value in the channel. Should be equal or higher than `Highest value` field. +
+Used to set the 100% intensity level value. +
+This value is as the values are stored in the channel data and is subject to be calculated according to `Value factor` and `Value offset`.
+|Channel data offset|32bit big endian unsigned integer| The byte offset of the actual channel data after the end of _Image header_ data (see above). +
+The channel data offset, in the storage configuration as interleaved per pixel, all point to the first data byte in the interleaved stream. (An additional offset of (channel index * 4 byte) will have to be used if reading separate channel information.
+|===
+
+.Image pixel data, pixel by pixel starting at top left and then from left to right, top line to bottom line.
+|===
+|Data format |Value
+
+|32bit big endian float |R value of RGB. Value range from 0.0 and up (no limit).
+|32bit big endian float |G value of RGB. Value range from 0.0 and up (no limit).
+|32bit big endian float |B value of RGB. Value range from 0.0 and up (no limit).
+|===

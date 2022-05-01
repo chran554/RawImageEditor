@@ -1,0 +1,25 @@
+= Raw image file format
+
+File suffix: `.fimg`
+
+Simple enough:
+
+.Image file header
+|===
+|Data format |Value
+
+|32bit big endian integer |File format major version
+|32bit big endian integer |File format minor version
+
+|32bit big endian integer |Image width in pixels
+|32bit big endian integer |Image height in pixels
+|===
+
+.Image pixel data, pixel by pixel starting at top left and then from left to right, top line to bottom line. Each pixels R,G, and B values in a long 32 bit float stream.
+|===
+|Data format |Value
+
+|32bit big endian float |R value of RGB. Value range from 0.0 and up (no limit).
+|32bit big endian float |G value of RGB. Value range from 0.0 and up (no limit).
+|32bit big endian float |B value of RGB. Value range from 0.0 and up (no limit).
+|===
