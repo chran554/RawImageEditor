@@ -1,4 +1,6 @@
-= Raw image file format
+= FIMG v1.0
+
+FIMG is a float image file format.
 
 File suffix: `.fimg`
 

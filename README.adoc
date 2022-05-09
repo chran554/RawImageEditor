@@ -20,7 +20,7 @@ image::documentation/images/ui_edited.png[alt=Adjusted brightness using histogra
 
 == FIMG file format
 
-The specification for the FIMG file format:
+The specification for the FIMG, the float image file format:
 
   * xref:documentation/fimg_file_format_v1.0.adoc[FIMG v1.0]
   * xref:documentation/fimg_file_format_v2.0.adoc[FIMG v2.0]

@@ -1,4 +1,6 @@
-= FIMG - The simple image file format with float values
+= FIMG v2.0
+
+FIMG is a float image file format.
 
 File suffix: `.fimg`
 
@@ -38,9 +40,11 @@ Simple enough:
 |Name |Data format |Description
 |Channel name |8 byte (64 bit in total) |Channel name or code in ASCII. +
 Reserved values are: +
-`RED`, `GREEN`, `BLUE`, and `ALPHA` for RGB red, green, and blue channels and alpha channel.
+`RGB_R`, `RGB_G`, `RGB_B` for RGB red, green, and blue channels. +
+`ALPHA` is reserved for alpha (transparency) channel.
 `MONO` is reserved for monochrome (grayscale) image information. +
-`CYAN`, `YELLOW`, `MANGENTA`, and `BLACK` is reserved for CMYK images. +
+`CMYK_C`, `CMYK_Y`, `CMYK_M`, and `CMYK_K` is reserved for CMYK images. +
+`YCbCr_Y`,  `YCbCr_Cb`, and `YCbCr_Cr` is reserved for YCbCr images. +
 Unused trailing bytes of channel name are set to zero/null/`0x00`.
 |Value factor |32bit big endian float |Value to multiply to the every channel value read. If not applicable or used it is set to `1.0`.
 |Value offset |32bit big endian float |Value to add to the every channel value read (after factor multiplication). If not applicable or used it is set to `0.0`.
