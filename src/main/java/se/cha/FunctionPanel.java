@@ -30,6 +30,8 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
     private final SplineFunction function;
     private BackgroundImageProducer backgroundImageProducer = null;
 
+    private Range zoomRange = new Range(0.0, 1.0);
+
     public FunctionPanel(SplineFunction function) {
         super();
 
@@ -59,6 +61,8 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
 
     public void reset() {
         function.reset();
+        zoomRange = null;
+        repaint();
     }
 
     public void removePoint(se.cha.function.Point point) {
@@ -66,7 +70,20 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
     }
 
     public double getValue(double x) {
-        return function.getValue(x);
+        if (zoomRange != null) {
+            if (x <= zoomRange.getMin()) {
+                return function.getFirstPoint().getY();
+            }
+
+            if (x >= zoomRange.getMax()) {
+                return function.getLastPoint().getY();
+            }
+
+            final double zoomLength = zoomRange.getMax() - zoomRange.getMin();
+            return function.getValue((x - zoomRange.getMin()) / zoomLength);
+        } else {
+            return function.getValue(x);
+        }
     }
 
     public void setBackgroundImageProducer(BackgroundImageProducer backgroundImageProducer) {
@@ -361,6 +378,58 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
         repaint();
     }
 
+    public void setZoom() {
+        if (zoomRange == null) {
+            zoomRange = new Range(function.getFirstPoint().getX(), function.getLastPoint().getX());
+        } else {
+            final double zoomLength = zoomRange.getMax() - zoomRange.getMin();
+            zoomRange = new Range(
+                    zoomRange.getMin() + zoomLength * function.getFirstPoint().getX(),
+                    zoomRange.getMax() - zoomLength * (1.0 - function.getLastPoint().getX())
+            );
+        }
+
+//        if ((zoomRange.getMin() == 0.0) || (zoomRange.getMax() == 1.0)) {
+//            zoomRange = null;
+//        } else {
+            final double zoomLength = zoomRange.getMax() - zoomRange.getMin();
+
+            final List<se.cha.function.Point> points = function.getPoints();
+            final List<se.cha.function.Point> newPoints = new ArrayList<>(points.size());
+
+            for (final se.cha.function.Point point : points) {
+                newPoints.add(new se.cha.function.Point((point.getX() - zoomRange.getMin()) / zoomLength, point.getY()));
+            }
+
+            function.replacePoints(newPoints);
+//        }
+
+        repaint();
+    }
+
+    public void resetZoom() {
+        final List<se.cha.function.Point> points = function.getPoints();
+        final List<se.cha.function.Point> newPoints = new ArrayList<>(points.size());
+        final double zoomLength = zoomRange.getMax() - zoomRange.getMin();
+
+        for (final se.cha.function.Point point : points) {
+            newPoints.add(new se.cha.function.Point(zoomRange.getMin() + point.getX() * zoomLength, point.getY()));
+        }
+
+        zoomRange = null;
+        function.replacePoints(newPoints);
+
+        repaint();
+    }
+
+    public boolean isZoomed() {
+        return getZoomRange() != null;
+    }
+
+    public se.cha.Range getZoomRange() {
+        return zoomRange;
+    }
+
     public interface FunctionChangedListener {
         void functionChanged();
     }
@@ -419,4 +488,5 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
         double inputValue;
         double outputValue;
     }
+
 }

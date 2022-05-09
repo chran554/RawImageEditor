@@ -46,6 +46,8 @@ public class RawImageEditor extends JFrame {
             private final ComboBoxDoubleItem histogramOption025 = new ComboBoxDoubleItem("Enhance low values (γ=0.25)", 0.25);
             private final ComboBoxDoubleItem histogramOption012 = new ComboBoxDoubleItem("Enhance low values (γ=0.12)", 0.12);
 
+            private final JComboBox<ComboBoxDoubleItem> histogramGammaComboBox = new JComboBox<>(new ComboBoxDoubleItem[]{histogramOptionLinear, histogramOption075, histogramOption025, histogramOption012});
+
             final ImagePanel imagePanel = new ImagePanel();
             final FunctionPanel functionPanel = new FunctionPanel(new SplineFunction());
             final RawFloatImage rawFloatImage = new RawFloatImage();
@@ -65,7 +67,6 @@ public class RawImageEditor extends JFrame {
                 final RawImageEditor frame = new RawImageEditor();
                 frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-                final JComboBox<ComboBoxDoubleItem> histogramGammaComboBox = new JComboBox<>(new ComboBoxDoubleItem[]{histogramOptionLinear, histogramOption075, histogramOption025, histogramOption012});
                 histogramGammaComboBox.addActionListener(new AbstractAction() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
@@ -79,6 +80,26 @@ public class RawImageEditor extends JFrame {
                     }
                 });
                 histogramGammaComboBox.setSelectedItem(histogramOption025);
+
+                final JButton histogramZoomCheckBox = new JButton(new AbstractAction("Zoom to extent points") {
+                    @Override
+                    public void actionPerformed(ActionEvent event) {
+                        final boolean isZoomed = functionPanel.isZoomed();
+
+                        if (!isZoomed) {
+                            functionPanel.setZoom();
+                        } else {
+                            functionPanel.resetZoom();
+                        }
+
+                        outputHistogramImageCache.invalidate();
+                        originalHistogramImageCache.invalidate();
+                        combinedHistogramImageCache.invalidate();
+                        functionPanel.repaint();
+
+                        ((JButton) event.getSource()).setText(isZoomed ? "Zoom to extent points" : "Zoom out");
+                    }
+                });
 
                 final JCheckBox histogramCheckBox = new JCheckBox(new AbstractAction("Apply intensity response curve") {
                     @Override
@@ -125,9 +146,7 @@ public class RawImageEditor extends JFrame {
                     functionPanel.repaint();
                 });
 
-                final JPanel imageBorder = new JPanel(new BorderLayout());
-                imageBorder.setBorder(new EmptyBorder(10, 10, 10, 10));
-                imageBorder.add(imagePanel, BorderLayout.CENTER);
+                final JPanel imageBorder = setupImagePanel();
 
                 final Insets noInsets = new Insets(0, 0, 0, 0);
                 final JButton loadButton = new JButton(new AbstractAction("Load raw image...") {
@@ -198,10 +217,11 @@ public class RawImageEditor extends JFrame {
                 informationPanel.add(outputValueLabel, new GridBagConstraints(1, 1, 1, 1, 1, 0, NORTHEAST, HORIZONTAL, noInsets, 0, 0));
 
                 final JPanel bottomPanel = new JPanel(new GridBagLayout());
-                bottomPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+                bottomPanel.setBorder(new EmptyBorder(8, 8, 8, 8));
 
                 int columnIndex = 0;
                 bottomPanel.add(histogramCheckBox, new GridBagConstraints(1, columnIndex++, 1, 1, 0, 0, NORTHWEST, HORIZONTAL, noInsets, 0, 0));
+                bottomPanel.add(histogramZoomCheckBox, new GridBagConstraints(1, columnIndex++, 1, 1, 0, 0, NORTHWEST, HORIZONTAL, noInsets, 0, 0));
                 bottomPanel.add(new JLabel("Histogram value scale:"), new GridBagConstraints(1, columnIndex++, 1, 1, 0, 0, NORTHWEST, NONE, new Insets(8, 4, 0, 4), 0, 0));
                 bottomPanel.add(histogramGammaComboBox, new GridBagConstraints(1, columnIndex++, 1, 1, 0, 0, NORTHWEST, NONE, new Insets(0, 4, 0, 4), 0, 0));
                 bottomPanel.add(informationPanel, new GridBagConstraints(1, columnIndex++, 1, 1, 0, 0, NORTHWEST, HORIZONTAL, new Insets(8, 4, 0, 4), 0, 0));
@@ -227,6 +247,13 @@ public class RawImageEditor extends JFrame {
                 frame.setSize(new Dimension(width, height));
 
                 frame.setVisible(true);
+            }
+
+            private JPanel setupImagePanel() {
+                final JPanel imageBorder = new JPanel(new BorderLayout());
+                imageBorder.setBorder(new EmptyBorder(8, 8, 8, 8));
+                imageBorder.add(imagePanel, BorderLayout.CENTER);
+                return imageBorder;
             }
 
             private void updateIntensityInformationLabels() {
@@ -264,21 +291,21 @@ public class RawImageEditor extends JFrame {
             public Image createHistogramImage(ImageCache originalHistogramImageCache, ImageCache outputHistogramImageCache, ImageCache combinedHistogramImageCache, RawFloatImage rawFloatImage, int width, int height, FunctionPanel functionPanel) {
                 if (!originalHistogramImageCache.valid() || !originalHistogramImageCache.boundsMatch(width, height)) {
                     final Graphics2D g = originalHistogramImageCache.createImage(width, height);
-                    final Histogram histogram = rawFloatImage.getIntensityHistogram(width);
+                    final Histogram histogram = rawFloatImage.getIntensityHistogram(width, functionPanel.getZoomRange());
 
                     final Color fillColor = new Color(128, 255, 255, 16);
                     final Color lineColor = new Color(128, 255, 255, 64);
-                    drawHistogramImage(histogram, width, height, g, fillColor, lineColor);
+                    drawHistogramImage(histogram, height, g, fillColor, lineColor);
                     g.dispose();
                 }
 
                 if (!outputHistogramImageCache.valid() || !outputHistogramImageCache.boundsMatch(width, height)) {
                     final Graphics2D g = outputHistogramImageCache.createImage(width, height);
-                    final Histogram histogram = rawFloatImage.getIntensityHistogram(width, functionPanel);
+                    final Histogram histogram = rawFloatImage.getIntensityHistogram(width, functionPanel, functionPanel.getZoomRange());
 
                     final Color fillColor = new Color(255, 128, 128, 16);
                     final Color lineColor = new Color(255, 128, 128, 64);
-                    drawHistogramImage(histogram, width, height, g, fillColor, lineColor);
+                    drawHistogramImage(histogram, height, g, fillColor, lineColor);
                     g.dispose();
                 }
 
@@ -303,7 +330,7 @@ public class RawImageEditor extends JFrame {
                         if (highLightImageCache.valid() && highLightImageCache.hasDimension(width, height)) {
                             g = highLightImageCache.getImageGraphics();
                             g.setColor(new Color(0, 0, 0, 0));
-                            g.fillRect(0,0, width, height);
+                            g.fillRect(0, 0, width, height);
                         } else {
                             g = highLightImageCache.createImage(width, height);
                         }
@@ -324,9 +351,12 @@ public class RawImageEditor extends JFrame {
                 return highLightImageCache.getCachedImage();
             }
 
-            private void drawHistogramImage(Histogram histogram, int width, int height, Graphics2D g, Color fillColor, Color lineColor) {
+            private void drawHistogramImage(Histogram histogram, int height, Graphics2D g, Color fillColor, Color lineColor) {
+                final int width = histogram.getAmountBoxes();
                 final double[] histogramValue = new double[width];
-                IntStream.range(0, width).forEach(pixelX -> histogramValue[pixelX] = Math.pow(histogram.getValueRGB(pixelX), histogramGammaEnhancement));
+                IntStream.range(0, width).forEach(pixelX -> {
+                    histogramValue[pixelX] = Math.pow(histogram.getValueRGB(pixelX), histogramGammaEnhancement);
+                });
 
                 g.setColor(fillColor);
                 for (int pixelX = 0; pixelX < width; pixelX++) {

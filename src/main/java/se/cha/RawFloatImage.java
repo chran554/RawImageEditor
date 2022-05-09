@@ -22,6 +22,7 @@ public class RawFloatImage {
     private double channelMaxValue;
 
     private Histogram intensityHistogram = null;
+    private Range intensityHistogramRange = null;
 
     private BufferedImage image;
 
@@ -30,6 +31,7 @@ public class RawFloatImage {
         height = -1;
         image = null;
         intensityHistogram = null;
+        intensityHistogramRange = null;
         r = new double[] {};
         g = new double[] {};
         b = new double[] {};
@@ -83,6 +85,7 @@ public class RawFloatImage {
 
         this.image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         this.intensityHistogram = null;
+        this.intensityHistogramRange = null;
 
         // Calculate pixel intensities. Find min and max intensity values
         this.intensityLstar = new double[amountPixels];
@@ -150,23 +153,54 @@ public class RawFloatImage {
         return intensityMaxValue;
     }
 
-    public Histogram getIntensityHistogram(int amountBoxes) {
-        if ((intensityHistogram == null) || (intensityHistogram.getAmountBoxes() != amountBoxes)) {
-            intensityHistogram = new Histogram(amountBoxes, 0.0, intensityMaxValue);
-            IntStream.range(0, width * height).forEach(pixelIndex -> intensityHistogram.addValue(getIntensityValue(pixelIndex)));
+    public Histogram getIntensityHistogram(int amountBoxes, Range includedRange) {
+        if ((intensityHistogram == null)
+                || (intensityHistogram.getAmountBoxes() != amountBoxes)
+                || (includedRange != null && !includedRange.equals(intensityHistogramRange))
+                || (includedRange != intensityHistogramRange)) {
+            if (includedRange == null) {
+                intensityHistogram = new Histogram(amountBoxes, 0.0, intensityMaxValue);
+            } else {
+                final double minValue = includedRange.getMin() * intensityMaxValue;
+                final double maxValue = includedRange.getMax() * intensityMaxValue;
+                intensityHistogram = new Histogram(amountBoxes, minValue, maxValue);
+            }
+
+            IntStream.range(0, width * height).forEach(pixelIndex -> {
+                final double intensityValue = getIntensityValue(pixelIndex);
+                final double normalizedIntensityValue = intensityValue / intensityMaxValue;
+
+                if ((includedRange == null) || includedRange.isInRange(normalizedIntensityValue)) {
+                    intensityHistogram.addValue(intensityValue);
+                }
+            });
         }
+
+        intensityHistogramRange = includedRange;
 
         return intensityHistogram;
     }
 
-    public Histogram getIntensityHistogram(int amountBoxes, FunctionPanel functionPanel) {
-        final Histogram histogram = new Histogram(amountBoxes, 0.0, intensityMaxValue);
+    public Histogram getIntensityHistogram(int amountBoxes, FunctionPanel functionPanel, Range includedRange) {
+        final Histogram histogram;
+        if (includedRange == null) {
+            histogram = new Histogram(amountBoxes, 0.0, intensityMaxValue);
+        } else {
+            final double minValue = includedRange.getMin() * intensityMaxValue;
+            final double maxValue = includedRange.getMax() * intensityMaxValue;
+            histogram = new Histogram(amountBoxes, minValue, maxValue);
+        }
 
         final double intensityMaxValueInv = 1.0 / intensityMaxValue;
         final int amountPixels = width * height;
         for (int pixelIndex = 0; pixelIndex < amountPixels; pixelIndex++) {
             final double normalizedIntensity = getIntensityValue(pixelIndex) * intensityMaxValueInv;
-            histogram.addValue(functionPanel.getValue(normalizedIntensity) * intensityMaxValue);
+            final double normalizedOutputIntensity = functionPanel.getValue(normalizedIntensity);
+            final double outputIntensity = normalizedOutputIntensity * intensityMaxValue;
+
+            if ((includedRange == null)  || includedRange.isInRange(normalizedOutputIntensity)) {
+                histogram.addValue(outputIntensity);
+            }
         }
 
         return histogram;
