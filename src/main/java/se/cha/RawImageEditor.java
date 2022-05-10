@@ -6,7 +6,6 @@ import se.cha.function.SplineFunction;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.image.BufferedImage;
@@ -20,6 +19,7 @@ import static java.awt.GridBagConstraints.HORIZONTAL;
 import static java.awt.GridBagConstraints.NONE;
 import static java.awt.GridBagConstraints.NORTHEAST;
 import static java.awt.GridBagConstraints.NORTHWEST;
+import static java.awt.GridBagConstraints.VERTICAL;
 
 public class RawImageEditor extends JFrame {
 
@@ -36,10 +36,13 @@ public class RawImageEditor extends JFrame {
 
         // Run the GUI codes on the Event-Dispatching thread for thread safety
         SwingUtilities.invokeLater(new Runnable() {
-            private final Color originalColor = new Color(128, 255, 255, 128);
-            private final Color outputColor = new Color(255, 128, 128, 196);
+            private final Color originalMarkerColor = new Color(128, 255, 255, 128);
+            private final Color outputMarkerColor = new Color(255, 128, 128, 196);
 
             private Double highlightIntensity = null;
+            private Color originalColor = null;
+            private Color outputColor = null;
+
             private double histogramGammaEnhancement = 1.0;
             private final ComboBoxDoubleItem histogramOptionLinear = new ComboBoxDoubleItem("Linear (γ=1.0)", 1.0);
             private final ComboBoxDoubleItem histogramOption075 = new ComboBoxDoubleItem("Enhance low values (γ=0.75)", 0.75);
@@ -51,13 +54,23 @@ public class RawImageEditor extends JFrame {
             final ImagePanel imagePanel = new ImagePanel();
             final FunctionPanel functionPanel = new FunctionPanel(new SplineFunction());
             final RawFloatImage rawFloatImage = new RawFloatImage();
-            final JLabel inputValueLabel = new JLabel("", SwingConstants.RIGHT);
-            final JLabel outputValueLabel = new JLabel("", SwingConstants.RIGHT);
+
+            final ColorPanel originalColorPanel = new ColorPanel(50);
+            final ColorPanel outputColorPanel = new ColorPanel(50);
+
+            final JLabel originalColorRedValueLabel = new JLabel("", SwingConstants.RIGHT);
+            final JLabel originalColorGreenValueLabel = new JLabel("", SwingConstants.RIGHT);
+            final JLabel originalColorBlueValueLabel = new JLabel("", SwingConstants.RIGHT);
+            final JLabel outputColorRedValueLabel = new JLabel("", SwingConstants.RIGHT);
+            final JLabel outputColorGreenValueLabel = new JLabel("", SwingConstants.RIGHT);
+            final JLabel outputColorBlueValueLabel = new JLabel("", SwingConstants.RIGHT);
+            final JLabel originalIntensityValueLabel = new JLabel("", SwingConstants.RIGHT);
+            final JLabel outputIntensityValueLabel = new JLabel("", SwingConstants.RIGHT);
 
             @Override
             public void run() {
-                inputValueLabel.setForeground(originalColor);
-                outputValueLabel.setForeground(outputColor);
+                originalIntensityValueLabel.setForeground(originalMarkerColor);
+                outputIntensityValueLabel.setForeground(outputMarkerColor);
 
                 final ImageCache originalHistogramImageCache = new ImageCache();
                 final ImageCache outputHistogramImageCache = new ImageCache();
@@ -137,18 +150,26 @@ public class RawImageEditor extends JFrame {
                     if (point != null) {
                         final double intensityValue = rawFloatImage.getIntensityValue(point.x, point.y);
                         highlightIntensity = intensityValue / rawFloatImage.getIntensityMaxValue();
+
+                        originalColor = rawFloatImage.getRGB(point.x, point.y);
+                        outputColor = rawFloatImage.getRGB(point.x, point.y, functionPanel);
                     } else {
                         highlightIntensity = null;
+
+                        originalColor = null;
+                        outputColor = null;
                     }
 
                     updateIntensityInformationLabels();
                     highLightImageCache.invalidate();
+
+                    updateColorInformation();
+
                     functionPanel.repaint();
                 });
 
                 final JPanel imageBorder = setupImagePanel();
 
-                final Insets noInsets = new Insets(0, 0, 0, 0);
                 final JButton loadButton = new JButton(new AbstractAction("Load raw image...") {
                     @Override
                     public void actionPerformed(ActionEvent event) {
@@ -204,37 +225,13 @@ public class RawImageEditor extends JFrame {
                 });
                 histogramCheckBox.setSelected(true);
 
-                final JLabel inputCaption = new JLabel("Input:");
-                final JLabel outputCaption = new JLabel("Output:");
-                inputCaption.setForeground(originalColor);
-                outputCaption.setForeground(outputColor);
+                final JPanel controlPanel = getControlPanel(histogramZoomCheckBox, histogramCheckBox, loadButton, saveButton);
 
-                final JPanel informationPanel = new JPanel(new GridBagLayout());
-                informationPanel.setBorder(new TitledBorder("Intensity"));
-                informationPanel.add(inputCaption, new GridBagConstraints(0, 0, 1, 1, 0, 0, NORTHWEST, HORIZONTAL, noInsets, 0, 0));
-                informationPanel.add(outputCaption, new GridBagConstraints(0, 1, 1, 1, 0, 0, NORTHWEST, HORIZONTAL, noInsets, 0, 0));
-                informationPanel.add(inputValueLabel, new GridBagConstraints(1, 0, 1, 1, 1, 0, NORTHEAST, HORIZONTAL, noInsets, 0, 0));
-                informationPanel.add(outputValueLabel, new GridBagConstraints(1, 1, 1, 1, 1, 0, NORTHEAST, HORIZONTAL, noInsets, 0, 0));
-
-                final JPanel bottomPanel = new JPanel(new GridBagLayout());
-                bottomPanel.setBorder(new EmptyBorder(8, 8, 8, 8));
-
-                int columnIndex = 0;
-                bottomPanel.add(histogramCheckBox, new GridBagConstraints(1, columnIndex++, 1, 1, 0, 0, NORTHWEST, HORIZONTAL, noInsets, 0, 0));
-                bottomPanel.add(histogramZoomCheckBox, new GridBagConstraints(1, columnIndex++, 1, 1, 0, 0, NORTHWEST, HORIZONTAL, noInsets, 0, 0));
-                bottomPanel.add(new JLabel("Histogram value scale:"), new GridBagConstraints(1, columnIndex++, 1, 1, 0, 0, NORTHWEST, NONE, new Insets(8, 4, 0, 4), 0, 0));
-                bottomPanel.add(histogramGammaComboBox, new GridBagConstraints(1, columnIndex++, 1, 1, 0, 0, NORTHWEST, NONE, new Insets(0, 4, 0, 4), 0, 0));
-                bottomPanel.add(informationPanel, new GridBagConstraints(1, columnIndex++, 1, 1, 0, 0, NORTHWEST, HORIZONTAL, new Insets(8, 4, 0, 4), 0, 0));
-                bottomPanel.add(new JPanel(), new GridBagConstraints(1, columnIndex++, 1, 1, 0, 1, NORTHWEST, BOTH, noInsets, 0, 0));
-                bottomPanel.add(loadButton, new GridBagConstraints(1, columnIndex++, 1, 1, 0, 0, NORTHWEST, HORIZONTAL, new Insets(4, 4, 0, 4), 0, 0));
-                bottomPanel.add(saveButton, new GridBagConstraints(1, columnIndex++, 1, 1, 0, 0, NORTHWEST, HORIZONTAL, new Insets(4, 4, 0, 4), 0, 0));
-
-                bottomPanel.add(functionPanel, new GridBagConstraints(0, 0, 1, columnIndex, 1, 0, NORTHWEST, BOTH, noInsets, 0, 0));
-
-                final JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, imageBorder, bottomPanel);
-                splitPane.setDividerLocation(0.8);
+                final JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, imageBorder, functionPanel);
+                splitPane.setDividerLocation(0.7);
                 splitPane.setResizeWeight(1);
 
+                frame.add(controlPanel, BorderLayout.EAST);
                 frame.add(splitPane, BorderLayout.CENTER);
                 frame.pack();
 
@@ -247,6 +244,105 @@ public class RawImageEditor extends JFrame {
                 frame.setSize(new Dimension(width, height));
 
                 frame.setVisible(true);
+            }
+
+            private void updateColorInformation() {
+                originalColorPanel.setColor(originalColor);
+                outputColorPanel.setColor(outputColor);
+
+                originalColorRedValueLabel.setText(originalColor != null ? Integer.toString(originalColor.getRed()) : "");
+                originalColorGreenValueLabel.setText(originalColor != null ? Integer.toString(originalColor.getGreen()) : "");
+                originalColorBlueValueLabel.setText(originalColor != null ? Integer.toString(originalColor.getBlue()) : "");
+                outputColorRedValueLabel.setText(outputColor != null ? Integer.toString(outputColor.getRed()) : "");
+                outputColorGreenValueLabel.setText(outputColor != null ? Integer.toString(outputColor.getGreen()) : "");
+                outputColorBlueValueLabel.setText(outputColor != null ? Integer.toString(outputColor.getBlue()) : "");
+            }
+
+            private JPanel getControlPanel(JButton histogramZoomCheckBox, JCheckBox histogramCheckBox, JButton loadButton, JButton saveButton) {
+                final Insets noInsets = new Insets(0, 0, 0, 0);
+
+                final JLabel inputCaption = new JLabel("Input:");
+                final JLabel outputCaption = new JLabel("Output:");
+                inputCaption.setForeground(originalMarkerColor);
+                outputCaption.setForeground(outputMarkerColor);
+
+                final JPanel colorInformationPanel = getColorInformationPanel();
+
+                final JPanel controlPanel = new JPanel(new GridBagLayout());
+                controlPanel.setBorder(new EmptyBorder(8, 8, 8, 8));
+
+                int columnIndex = 0;
+                controlPanel.add(loadButton, new GridBagConstraints(0, columnIndex++, 1, 1, 0, 0, NORTHWEST, HORIZONTAL, new Insets(4, 4, 0, 4), 0, 0));
+                controlPanel.add(saveButton, new GridBagConstraints(0, columnIndex++, 1, 1, 0, 0, NORTHWEST, HORIZONTAL, new Insets(4, 4, 0, 4), 0, 0));
+                controlPanel.add(colorInformationPanel, new GridBagConstraints(0, columnIndex++, 1, 1, 0, 0, NORTHWEST, HORIZONTAL, new Insets(4, 4, 0, 4), 0, 0));
+
+                controlPanel.add(new JPanel(), new GridBagConstraints(0, columnIndex++, 1, 1, 0, 1, NORTHWEST, BOTH, noInsets, 0, 0));
+
+                controlPanel.add(histogramCheckBox, new GridBagConstraints(0, columnIndex++, 1, 1, 0, 0, NORTHWEST, HORIZONTAL, noInsets, 0, 0));
+                controlPanel.add(histogramZoomCheckBox, new GridBagConstraints(0, columnIndex++, 1, 1, 0, 0, NORTHWEST, HORIZONTAL, noInsets, 0, 0));
+                controlPanel.add(new JLabel("Histogram value scale:"), new GridBagConstraints(0, columnIndex++, 1, 1, 0, 0, NORTHWEST, NONE, new Insets(8, 4, 0, 4), 0, 0));
+                controlPanel.add(histogramGammaComboBox, new GridBagConstraints(0, columnIndex++, 1, 1, 0, 0, NORTHWEST, NONE, new Insets(0, 4, 0, 4), 0, 0));
+
+                return controlPanel;
+            }
+
+            private JPanel getColorInformationPanel() {
+                final JPanel colorInformationPanel = new JPanel(new GridBagLayout());
+
+                final JLabel inputRgbLabel = new JLabel("Input:");
+                inputRgbLabel.setForeground(originalMarkerColor);
+                final JLabel outputRgbLabel = new JLabel("Output:");
+                outputRgbLabel.setForeground(outputMarkerColor);
+
+                final JLabel originalRedLabel = new JLabel("Red:");
+                final JLabel originalGreenLabel = new JLabel("Green:");
+                final JLabel originalBlueLabel = new JLabel("Blue:");
+                final JLabel originalIntensityLabel = new JLabel("Intensity:");
+                final JLabel outputRedLabel = new JLabel("Red:");
+                final JLabel outputGreenLabel = new JLabel("Green:");
+                final JLabel outputBlueLabel = new JLabel("Blue:");
+                final JLabel outputIntensityLabel = new JLabel("Intensity:");
+                final Color labelOriginalForeground = originalRedLabel.getForeground();
+                final Color labelRgbForegroundColor = new Color(labelOriginalForeground.getRed(), labelOriginalForeground.getGreen(), labelOriginalForeground.getBlue(), 96);
+
+                originalRedLabel.setForeground(labelRgbForegroundColor);
+                originalGreenLabel.setForeground(labelRgbForegroundColor);
+                originalBlueLabel.setForeground(labelRgbForegroundColor);
+                originalIntensityLabel.setForeground(labelRgbForegroundColor);
+                outputRedLabel.setForeground(labelRgbForegroundColor);
+                outputGreenLabel.setForeground(labelRgbForegroundColor);
+                outputBlueLabel.setForeground(labelRgbForegroundColor);
+                outputIntensityLabel.setForeground(labelRgbForegroundColor);
+
+                int rowIndex = -1;
+
+                final Insets rgbInsets = new Insets(0, 4, 0, 4);
+
+                colorInformationPanel.add(inputRgbLabel, new GridBagConstraints(0, ++rowIndex, 3, 1, 0, 0, NORTHWEST, HORIZONTAL, new Insets(4, 4, 0, 4), 0, 0));
+                colorInformationPanel.add(originalColorPanel, new GridBagConstraints(0, ++rowIndex, 1, 4, 0, 0, NORTHWEST, VERTICAL, new Insets(4, 4, 0, 4), 0, 0));
+                colorInformationPanel.add(originalRedLabel, new GridBagConstraints(1, rowIndex + 0, 1, 1, 0, 0, NORTHWEST, NONE, rgbInsets, 0, 0));
+                colorInformationPanel.add(originalGreenLabel, new GridBagConstraints(1, rowIndex + 1, 1, 1, 0, 0, NORTHWEST, NONE, rgbInsets, 0, 0));
+                colorInformationPanel.add(originalBlueLabel, new GridBagConstraints(1, rowIndex + 2, 1, 1, 0, 0, NORTHWEST, NONE, rgbInsets, 0, 0));
+                colorInformationPanel.add(originalIntensityLabel, new GridBagConstraints(1, rowIndex + 3, 1, 1, 0, 0, NORTHWEST, NONE, new Insets(4, 4, 0, 4), 0, 0));
+                colorInformationPanel.add(originalColorRedValueLabel, new GridBagConstraints(2, rowIndex + 0, 1, 1, 1, 0, NORTHEAST, HORIZONTAL, rgbInsets, 0, 0));
+                colorInformationPanel.add(originalColorGreenValueLabel, new GridBagConstraints(2, rowIndex + 1, 1, 1, 1, 0, NORTHEAST, HORIZONTAL, rgbInsets, 0, 0));
+                colorInformationPanel.add(originalColorBlueValueLabel, new GridBagConstraints(2, rowIndex + 2, 1, 1, 1, 0, NORTHEAST, HORIZONTAL, rgbInsets, 0, 0));
+                colorInformationPanel.add(originalIntensityValueLabel, new GridBagConstraints(2, rowIndex + 3, 1, 1, 1, 0, NORTHEAST, HORIZONTAL, new Insets(4, 4, 0, 4), 0, 0));
+
+                rowIndex += 3;
+
+                colorInformationPanel.add(outputRgbLabel, new GridBagConstraints(0, ++rowIndex, 3, 1, 0, 0, NORTHWEST, HORIZONTAL, new Insets(4, 4, 0, 4), 0, 0));
+                colorInformationPanel.add(outputColorPanel, new GridBagConstraints(0, ++rowIndex, 1, 4, 0, 0, NORTHWEST, VERTICAL, new Insets(4, 4, 0, 4), 0, 0));
+                colorInformationPanel.add(outputRedLabel, new GridBagConstraints(1, rowIndex + 0, 1, 1, 0, 0, NORTHWEST, NONE, rgbInsets, 0, 0));
+                colorInformationPanel.add(outputGreenLabel, new GridBagConstraints(1, rowIndex + 1, 1, 1, 0, 0, NORTHWEST, NONE, rgbInsets, 0, 0));
+                colorInformationPanel.add(outputBlueLabel, new GridBagConstraints(1, rowIndex + 2, 1, 1, 0, 0, NORTHWEST, NONE, rgbInsets, 0, 0));
+                colorInformationPanel.add(outputIntensityLabel, new GridBagConstraints(1, rowIndex + 3, 1, 1, 0, 0, NORTHWEST, NONE, new Insets(4, 4, 0, 4), 0, 0));
+                colorInformationPanel.add(outputColorRedValueLabel, new GridBagConstraints(2, rowIndex + 0, 1, 1, 1, 0, NORTHEAST, HORIZONTAL, rgbInsets, 0, 0));
+                colorInformationPanel.add(outputColorGreenValueLabel, new GridBagConstraints(2, rowIndex + 1, 1, 1, 1, 0, NORTHEAST, HORIZONTAL, rgbInsets, 0, 0));
+                colorInformationPanel.add(outputColorBlueValueLabel, new GridBagConstraints(2, rowIndex + 2, 1, 1, 1, 0, NORTHEAST, HORIZONTAL, rgbInsets, 0, 0));
+                colorInformationPanel.add(outputIntensityValueLabel, new GridBagConstraints(2, rowIndex + 3, 1, 1, 1, 0, NORTHEAST, HORIZONTAL, new Insets(4, 4, 0, 4), 0, 0));
+
+                return colorInformationPanel;
             }
 
             private JPanel setupImagePanel() {
@@ -266,11 +362,11 @@ public class RawImageEditor extends JFrame {
                     numberFormat.setMinimumFractionDigits(4);
                     numberFormat.setMaximumFractionDigits(4);
 
-                    inputValueLabel.setText(numberFormat.format(inputValue * 100.0) + "%");
-                    outputValueLabel.setText(numberFormat.format(outputValue * 100.0) + "%");
+                    originalIntensityValueLabel.setText(numberFormat.format(inputValue * 100.0) + "%");
+                    outputIntensityValueLabel.setText(numberFormat.format(outputValue * 100.0) + "%");
                 } else {
-                    inputValueLabel.setText("");
-                    outputValueLabel.setText("");
+                    originalIntensityValueLabel.setText("");
+                    outputIntensityValueLabel.setText("");
                 }
             }
 
@@ -338,10 +434,10 @@ public class RawImageEditor extends JFrame {
                         final int pixelX = (int) Math.round(width * normalizedIntensityValue);
                         final int pixelXOutput = (int) Math.round(width * normalizedOutputIntensityValue);
 
-                        g.setColor(originalColor);
+                        g.setColor(originalMarkerColor);
                         g.drawLine(pixelX, 0, pixelX, height);
 
-                        g.setColor(outputColor);
+                        g.setColor(outputMarkerColor);
                         g.drawLine(pixelXOutput, 0, pixelXOutput, height);
 
                         g.dispose();

@@ -1,5 +1,6 @@
 package se.cha;
 
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
@@ -32,9 +33,9 @@ public class RawFloatImage {
         image = null;
         intensityHistogram = null;
         intensityHistogramRange = null;
-        r = new double[] {};
-        g = new double[] {};
-        b = new double[] {};
+        r = new double[]{};
+        g = new double[]{};
+        b = new double[]{};
         intensityMaxValue = -Double.MAX_VALUE;
         intensityMinValue = Double.MAX_VALUE;
         channelMaxValue = -Double.MAX_VALUE;
@@ -47,6 +48,7 @@ public class RawFloatImage {
     public void loadFile(File file) throws IOException {
         loadFile(new FileInputStream(file));
     }
+
     public void loadFile(String filename) throws IOException {
         final FileInputStream fileInputStream = new FileInputStream(filename);
         loadFile(fileInputStream);
@@ -198,7 +200,7 @@ public class RawFloatImage {
             final double normalizedOutputIntensity = functionPanel.getValue(normalizedIntensity);
             final double outputIntensity = normalizedOutputIntensity * intensityMaxValue;
 
-            if ((includedRange == null)  || includedRange.isInRange(normalizedOutputIntensity)) {
+            if ((includedRange == null) || includedRange.isInRange(normalizedOutputIntensity)) {
                 histogram.addValue(outputIntensity);
             }
         }
@@ -221,8 +223,8 @@ public class RawFloatImage {
     public double getIntensityValue(int x, int y) {
         if ((x < 0) || (x >= width) || (y < 0) || (y >= height)) {
             System.err.println("Can't get pixel intensity outside image bounds {x:0-" + (width - 1) + ", y:0-" + (height - 1) + "}. Requested {x:" + x + ", y:" + y + "}");
-            x = Math.max(0, Math.min(x, width -1));
-            y = Math.max(0, Math.min(x, height -1));
+            x = Math.max(0, Math.min(x, width - 1));
+            y = Math.max(0, Math.min(x, height - 1));
         }
 
         return getIntensityValue(y * width + x);
@@ -240,4 +242,29 @@ public class RawFloatImage {
         final int pixelIndex = y * width + x;
         return new double[]{r[pixelIndex], g[pixelIndex], b[pixelIndex]};
     }
+
+    public Color getRGB(int x, int y) {
+        final int pixelIndex = y * width + x;
+        final double conversionConstant = 256.0 / channelMaxValue;
+
+        final int rValue = (int) clamp(0.0, 255.0, r[pixelIndex] * conversionConstant);
+        final int gValue = (int) clamp(0.0, 255.0, g[pixelIndex] * conversionConstant);
+        final int bValue = (int) clamp(0.0, 255.0, b[pixelIndex] * conversionConstant);
+
+        return new Color(0xFF000000 | (rValue << 16) | (gValue << 8) | (bValue << 0));
+    }
+
+    public Color getRGB(int x, int y, FunctionPanel functionPanel) {
+        final int pixelIndex = y * width + x;
+        final double conversionConstant = 256.0 / channelMaxValue;
+
+        final double pixelIntensityFactor = getPixelIntensityFactor(pixelIndex, functionPanel);
+
+        final int rValue = (int) clamp(0.0, 255.0, pixelIntensityFactor * r[pixelIndex] * conversionConstant);
+        final int gValue = (int) clamp(0.0, 255.0, pixelIntensityFactor * g[pixelIndex] * conversionConstant);
+        final int bValue = (int) clamp(0.0, 255.0, pixelIntensityFactor * b[pixelIndex] * conversionConstant);
+
+        return new Color(0xFF000000 | (rValue << 16) | (gValue << 8) | (bValue << 0));
+    }
+
 }
