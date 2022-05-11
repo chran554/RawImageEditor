@@ -30,6 +30,8 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
     private final SplineFunction function;
     private BackgroundImageProducer backgroundImageProducer = null;
 
+    private boolean drawLinearReference = true;
+
     private Range zoomRange = new Range(0.0, 1.0);
 
     public FunctionPanel(SplineFunction function) {
@@ -120,8 +122,10 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
         drawLineBeforeAndAfterCurve(graphics2D, width, height);
 
         // Draw 1:1 response line
-        graphics2D.setColor(new Color(255, 255, 255, 32));
-        drawLine1to1response(graphics2D, width, height);
+        if ((zoomRange == null) && drawLinearReference) {
+            graphics2D.setColor(new Color(255, 255, 255, 32));
+            drawLine1to1response(graphics2D, width, height);
+        }
 
         // Draw line from first control point to last control point
         graphics2D.setColor(new Color(255, 255, 255, 32));
@@ -135,9 +139,6 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
             final Image image = backgroundImageProducer.getForegroundImage(width, height, x);
             graphics2D.drawImage(image, 0, 0, width, height, null);
         }
-
-        // Draw cross-hair
-        // drawMousePosition(graphics2D, width, height);
 
         // Draw spline curve control points
         drawControlPoints(graphics2D, width, height, Color.WHITE, Color.RED);
@@ -476,6 +477,14 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
 
     public void removeHighlightPosition() {
         highlightPosition = -Double.MAX_VALUE;
+    }
+
+    public boolean isDrawLinearReference() {
+        return drawLinearReference;
+    }
+
+    public void setDrawLinearReference(boolean drawLinearReference) {
+        this.drawLinearReference = drawLinearReference;
     }
 
     public interface BackgroundImageProducer {
