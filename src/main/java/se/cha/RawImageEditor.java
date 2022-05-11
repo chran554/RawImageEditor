@@ -8,9 +8,12 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.util.stream.IntStream;
 
@@ -46,14 +49,17 @@ public class RawImageEditor extends JFrame {
             private double histogramGammaEnhancement = 1.0;
             private final ComboBoxDoubleItem histogramOptionLinear = new ComboBoxDoubleItem("Linear (γ=1.0)", 1.0);
             private final ComboBoxDoubleItem histogramOption075 = new ComboBoxDoubleItem("Enhance low values (γ=0.75)", 0.75);
+            private final ComboBoxDoubleItem histogramOption050 = new ComboBoxDoubleItem("Enhance low values (γ=0.50)", 0.50);
             private final ComboBoxDoubleItem histogramOption025 = new ComboBoxDoubleItem("Enhance low values (γ=0.25)", 0.25);
             private final ComboBoxDoubleItem histogramOption012 = new ComboBoxDoubleItem("Enhance low values (γ=0.12)", 0.12);
 
-            private final JComboBox<ComboBoxDoubleItem> histogramGammaComboBox = new JComboBox<>(new ComboBoxDoubleItem[]{histogramOptionLinear, histogramOption075, histogramOption025, histogramOption012});
+            private final JComboBox<ComboBoxDoubleItem> histogramGammaComboBox = new JComboBox<>(new ComboBoxDoubleItem[]{histogramOptionLinear, histogramOption075, histogramOption050, histogramOption025, histogramOption012});
 
             final ImagePanel imagePanel = new ImagePanel();
             final FunctionPanel functionPanel = new FunctionPanel(new SplineFunction());
             final RawFloatImage rawFloatImage = new RawFloatImage();
+
+            final JLabel imageZoomLabel = new JLabel("Image scale:");
 
             final ColorPanel originalColorPanel = new ColorPanel(50);
             final ColorPanel outputColorPanel = new ColorPanel(50);
@@ -146,6 +152,13 @@ public class RawImageEditor extends JFrame {
                     }
                 });
 
+                imagePanel.addComponentListener(new ComponentAdapter() {
+                    @Override
+                    public void componentResized(ComponentEvent e) {
+                        updateImageScaleInformation();
+                    }
+                });
+
                 imagePanel.addMousePositionListener(point -> {
                     if (point != null) {
                         final double intensityValue = rawFloatImage.getIntensityValue(point.x, point.y);
@@ -169,6 +182,7 @@ public class RawImageEditor extends JFrame {
                 });
 
                 final JPanel imageBorder = setupImagePanel();
+                final JPanel functionBorder = setupFunctionPanel();
 
                 final JButton loadButton = new JButton(new AbstractAction("Load raw image...") {
                     @Override
@@ -195,7 +209,7 @@ public class RawImageEditor extends JFrame {
                             originalHistogramImageCache.invalidate();
                             combinedHistogramImageCache.invalidate();
 
-                            // frame.pack();
+                            updateImageScaleInformation();
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -227,7 +241,7 @@ public class RawImageEditor extends JFrame {
 
                 final JPanel controlPanel = getControlPanel(histogramZoomCheckBox, histogramCheckBox, loadButton, saveButton);
 
-                final JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, imageBorder, functionPanel);
+                final JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, imageBorder, functionBorder);
                 splitPane.setDividerLocation(0.7);
                 splitPane.setResizeWeight(1);
 
@@ -244,6 +258,14 @@ public class RawImageEditor extends JFrame {
                 frame.setSize(new Dimension(width, height));
 
                 frame.setVisible(true);
+            }
+
+            private void updateImageScaleInformation() {
+                final double zoom = 100.0 / imagePanel.getScaleFactor();
+                final NumberFormat percentNumberFormat = NumberFormat.getInstance();
+                percentNumberFormat.setMaximumFractionDigits(0);
+                percentNumberFormat.setRoundingMode(RoundingMode.HALF_UP);
+                imageZoomLabel.setText("Image scale: " + percentNumberFormat.format(zoom) + "%");
             }
 
             private void updateColorInformation() {
@@ -274,6 +296,7 @@ public class RawImageEditor extends JFrame {
                 int columnIndex = 0;
                 controlPanel.add(loadButton, new GridBagConstraints(0, columnIndex++, 1, 1, 0, 0, NORTHWEST, HORIZONTAL, new Insets(4, 4, 0, 4), 0, 0));
                 controlPanel.add(saveButton, new GridBagConstraints(0, columnIndex++, 1, 1, 0, 0, NORTHWEST, HORIZONTAL, new Insets(4, 4, 0, 4), 0, 0));
+                controlPanel.add(imageZoomLabel, new GridBagConstraints(0, columnIndex++, 1, 1, 0, 0, NORTHWEST, HORIZONTAL, new Insets(4, 4, 0, 4), 0, 0));
                 controlPanel.add(colorInformationPanel, new GridBagConstraints(0, columnIndex++, 1, 1, 0, 0, NORTHWEST, HORIZONTAL, new Insets(4, 4, 0, 4), 0, 0));
 
                 controlPanel.add(new JPanel(), new GridBagConstraints(0, columnIndex++, 1, 1, 0, 1, NORTHWEST, BOTH, noInsets, 0, 0));
@@ -349,6 +372,15 @@ public class RawImageEditor extends JFrame {
                 final JPanel imageBorder = new JPanel(new BorderLayout());
                 imageBorder.setBorder(new EmptyBorder(8, 8, 8, 8));
                 imageBorder.add(imagePanel, BorderLayout.CENTER);
+
+                return imageBorder;
+            }
+
+            private JPanel setupFunctionPanel() {
+                final JPanel imageBorder = new JPanel(new BorderLayout());
+                imageBorder.setBorder(new EmptyBorder(8, 8, 8, 8));
+                imageBorder.add(functionPanel, BorderLayout.CENTER);
+
                 return imageBorder;
             }
 

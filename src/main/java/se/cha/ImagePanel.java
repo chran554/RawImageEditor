@@ -16,6 +16,7 @@ public class ImagePanel extends JPanel implements MouseMotionListener, MouseList
 
     private int scaledImageWidth;
     private int scaledImageHeight;
+    private double scaleFactor = 1.0;
 
     public ImagePanel() {
         addMouseListener(this);
@@ -41,10 +42,7 @@ public class ImagePanel extends JPanel implements MouseMotionListener, MouseList
             final int imageWidth = image.getWidth(null);
             final int imageHeight = image.getHeight(null);
 
-            double scaleFactor = 1.0;
-            if ((imageWidth > width) || (imageHeight > height)) {
-                scaleFactor = Math.max(imageWidth / (1.0 * width), imageHeight / (1.0 * height));
-            }
+            final double scaleFactor = getScaleFactor();
 
             scaledImageWidth = (int) (imageWidth / scaleFactor);
             scaledImageHeight = (int) (imageHeight / scaleFactor);
@@ -69,6 +67,24 @@ public class ImagePanel extends JPanel implements MouseMotionListener, MouseList
 
     public BufferedImage getImage() {
         return this.image;
+    }
+
+    public double getScaleFactor() {
+        scaleFactor = 1.0;
+
+        if (image != null) {
+            final int width = getWidth();
+            final int height = getHeight();
+
+            final int imageWidth = image.getWidth(null);
+            final int imageHeight = image.getHeight(null);
+
+            if ((imageWidth > width) || (imageHeight > height)) {
+                scaleFactor = Math.max(imageWidth / (1.0 * width), imageHeight / (1.0 * height));
+            }
+        }
+
+        return scaleFactor;
     }
 
     public interface MousePositionListener {
@@ -143,9 +159,15 @@ public class ImagePanel extends JPanel implements MouseMotionListener, MouseList
         if ((pixelPoint.y < heightScaled) && (pixelPoint.x < widthScaled)) {
             final double normalizedX = pixelPoint.x / (1.0 * (widthScaled - 1));
             final double normalizedY = pixelPoint.y / (1.0 * (heightScaled - 1));
-            return new java.awt.Point((int) Math.round(normalizedX * imageWidth), (int) Math.round(normalizedY * imageHeight));
-        } else {
-            return null;
+
+            final int imageX = (int) Math.round(normalizedX * imageWidth);
+            final int imageY = (int) Math.round(normalizedY * imageHeight);
+
+            if ((imageX >= 0) && (imageX <= (imageWidth - 1)) && (imageY >= 0) && (imageY <= (imageHeight - 1))) {
+                return new java.awt.Point(imageX, imageY);
+            }
         }
+
+        return null;
     }
 }

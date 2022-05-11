@@ -52,6 +52,7 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
 
         addMouseListener(this);
         addMouseMotionListener(this);
+        setPreferredSize(new Dimension(400, 200));
         setMinimumSize(new Dimension(100, 75));
     }
 
