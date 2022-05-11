@@ -451,9 +451,6 @@ public class RawImageEditor extends JFrame {
                 if (!highLightImageCache.valid()) {
 
                     if (highlightIntensity != null) {
-                        final double normalizedIntensityValue = highlightIntensity;
-                        final double normalizedOutputIntensityValue = functionPanel.getValue(normalizedIntensityValue);
-
                         final Graphics2D g;
                         if (highLightImageCache.valid() && highLightImageCache.hasDimension(width, height)) {
                             g = highLightImageCache.getImageGraphics();
@@ -463,11 +460,20 @@ public class RawImageEditor extends JFrame {
                             g = highLightImageCache.createImage(width, height);
                         }
 
-                        final int pixelX = (int) Math.round(width * normalizedIntensityValue);
+                        double normalizedIntensityValue = highlightIntensity;
+                        double normalizedOutputIntensityValue = functionPanel.getValue(normalizedIntensityValue);
+
+                        if (functionPanel.isZoomed()) {
+                            final Range zoomRange = functionPanel.getZoomRange();
+                            normalizedIntensityValue = (normalizedIntensityValue - zoomRange.getMin()) / zoomRange.getLength();
+                            normalizedOutputIntensityValue = (normalizedOutputIntensityValue - zoomRange.getMin()) / zoomRange.getLength();
+                        }
+
+                        final int pixelXInput = (int) Math.round(width * normalizedIntensityValue);
                         final int pixelXOutput = (int) Math.round(width * normalizedOutputIntensityValue);
 
                         g.setColor(originalMarkerColor);
-                        g.drawLine(pixelX, 0, pixelX, height);
+                        g.drawLine(pixelXInput, 0, pixelXInput, height);
 
                         g.setColor(outputMarkerColor);
                         g.drawLine(pixelXOutput, 0, pixelXOutput, height);

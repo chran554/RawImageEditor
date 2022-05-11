@@ -114,13 +114,6 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
             graphics2D.drawImage(image, 0, 0, width, height, null);
         }
 
-        // Draw spline curve
-        graphics2D.setColor(Color.LIGHT_GRAY);
-        drawCurve(graphics2D, width, height);
-
-        // Draw curve before first control point and after last control point
-        drawLineBeforeAndAfterCurve(graphics2D, width, height);
-
         // Draw 1:1 response line
         if ((zoomRange == null) && drawLinearReference) {
             graphics2D.setColor(new Color(255, 255, 255, 32));
@@ -139,6 +132,13 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
             final Image image = backgroundImageProducer.getForegroundImage(width, height, x);
             graphics2D.drawImage(image, 0, 0, width, height, null);
         }
+
+        // Draw spline curve
+        graphics2D.setColor(Color.LIGHT_GRAY);
+        drawCurve(graphics2D, width, height);
+
+        // Draw curve before first control point and after last control point
+        drawLineBeforeAndAfterCurve(graphics2D, width, height);
 
         // Draw spline curve control points
         drawControlPoints(graphics2D, width, height, Color.WHITE, Color.RED);
@@ -438,7 +438,12 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
 
     private void notifyCurrentValueListeners() {
         if (mousePosition != null) {
-            final double originalNormalizedIntensity = mousePosition.x / (1.0 * (getWidth() - 1));
+            double originalNormalizedIntensity = mousePosition.x / (1.0 * (getWidth() - 1));
+
+            if (zoomRange != null) {
+                originalNormalizedIntensity = zoomRange.getMin() + originalNormalizedIntensity * zoomRange.getLength();
+            }
+
             final double outputNormalizedIntensity = getValue(originalNormalizedIntensity);
             final CurrentValueEvent currentValueEvent = new CurrentValueEvent(originalNormalizedIntensity, outputNormalizedIntensity);
 
