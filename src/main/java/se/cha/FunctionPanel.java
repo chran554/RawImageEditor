@@ -21,6 +21,7 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
     private static final int CONTROL_POINT_WIDTH = 4;
 
     private se.cha.function.Point dragPoint = null;
+    private se.cha.function.Point closePointToMousePosition;
     private java.awt.Point mousePosition;
     private double highlightPosition;
 
@@ -98,7 +99,7 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
         final Graphics2D graphics2D = (Graphics2D) g;
         graphics2D.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         graphics2D.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-        graphics2D.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
+        graphics2D.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_NORMALIZE);
 
         final int width = graphics2D.getClipBounds().width;
         final int height = graphics2D.getClipBounds().height;
@@ -142,6 +143,11 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
 
         // Draw spline curve control points
         drawControlPoints(graphics2D, width, height, Color.WHITE, Color.RED);
+
+        // Draw close curve control point
+        if ((closePointToMousePosition != null) && (dragPoint == null)) {
+            drawHighlightedControlPoint(graphics2D, closePointToMousePosition, width, height, Color.WHITE);
+        }
 
         graphics2D.dispose();
     }
@@ -205,26 +211,47 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
         }
     }
 
+    private void drawHighlightedControlPoint(Graphics2D graphics2D, se.cha.function.Point point, int width, int height, Color color) {
+        final Stroke originalStroke = graphics2D.getStroke();
+
+        final int pixelX = (int) Math.round(point.getX() * width);
+        final int pixelY = height - (int) Math.round(point.getY() * height);
+
+        final int haloWidth = CONTROL_POINT_WIDTH * 2;
+        final int halfHaloWidth = haloWidth / 2;
+
+        graphics2D.setColor(color);
+        graphics2D.setStroke(new BasicStroke(CONTROL_POINT_WIDTH / 2.0f));
+        graphics2D.drawOval(pixelX - halfHaloWidth, pixelY - halfHaloWidth, haloWidth, haloWidth);
+        // graphics2D.drawLine(pixelX, pixelY, pixelX, pixelY);
+
+        graphics2D.setStroke(originalStroke);
+    }
+
     private void drawCurve(Graphics2D graphics2D, int width, int height) {
         final double minX = function.getFirstPoint().getX();
         final double maxX = function.getLastPoint().getX();
         final int amountSteps = (int) ((maxX - minX) * width);
         final double deltaX = (maxX - minX) / (1.0 * amountSteps);
 
-        se.cha.function.Point previousPoint = null;
+        final int[] pixelXValues = new int[amountSteps];
+        final int[] pixelYValues = new int[amountSteps];
+
         for (int i = 0; i < amountSteps; i++) {
             final double x = minX + i * deltaX;
             final double y = function.getValue(x);
-            final se.cha.function.Point point = new se.cha.function.Point(x * width, y * height);
-            if (previousPoint != null) {
-                graphics2D.drawLine(
-                        (int) Math.round(previousPoint.getX()),
-                        height - (int) Math.round(previousPoint.getY()),
-                        (int) Math.round(point.getX()),
-                        height - (int) Math.round(point.getY()));
-            }
-            previousPoint = point;
+
+            final double pixelX = x * width;
+            final double pixelY = y * height;
+
+            pixelXValues[i] = (int) Math.round(pixelX);
+            pixelYValues[i] = height - (int) Math.round(pixelY);
         }
+
+        final Stroke stroke = graphics2D.getStroke();
+        graphics2D.setStroke(new BasicStroke(1.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        graphics2D.drawPolyline(pixelXValues, pixelYValues, amountSteps);
+        graphics2D.setStroke(stroke);
     }
 
     @Override
@@ -346,12 +373,15 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
                 dragPoint.set(newX, newY);
             }
         }
+
         repaint();
     }
 
     @Override
     public void mouseMoved(MouseEvent mouseEvent) {
         mousePosition = mouseEvent.getPoint();
+        closePointToMousePosition = getPixelClosestValidPoint(mousePosition, PIXEL_CLOSE_RADIUS);
+
         notifyCurrentValueListeners();
         repaint();
     }
@@ -394,16 +424,16 @@ public class FunctionPanel extends JPanel implements MouseListener, MouseMotionL
 //        if ((zoomRange.getMin() == 0.0) || (zoomRange.getMax() == 1.0)) {
 //            zoomRange = null;
 //        } else {
-            final double zoomLength = zoomRange.getMax() - zoomRange.getMin();
+        final double zoomLength = zoomRange.getMax() - zoomRange.getMin();
 
-            final List<se.cha.function.Point> points = function.getPoints();
-            final List<se.cha.function.Point> newPoints = new ArrayList<>(points.size());
+        final List<se.cha.function.Point> points = function.getPoints();
+        final List<se.cha.function.Point> newPoints = new ArrayList<>(points.size());
 
-            for (final se.cha.function.Point point : points) {
-                newPoints.add(new se.cha.function.Point((point.getX() - zoomRange.getMin()) / zoomLength, point.getY()));
-            }
+        for (final se.cha.function.Point point : points) {
+            newPoints.add(new se.cha.function.Point((point.getX() - zoomRange.getMin()) / zoomLength, point.getY()));
+        }
 
-            function.replacePoints(newPoints);
+        function.replacePoints(newPoints);
 //        }
 
         repaint();
