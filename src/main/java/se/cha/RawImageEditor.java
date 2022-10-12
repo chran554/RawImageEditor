@@ -29,6 +29,8 @@ public class RawImageEditor extends JFrame {
     public static void main(String[] args) {
         System.out.println("Running raw image editor...");
 
+        final File defaultRawImageDirectory = getDefaultRawImageDirectory(args);
+
         FlatDarkLaf.setup();
 
         try {
@@ -193,7 +195,7 @@ public class RawImageEditor extends JFrame {
                             fileChooser.setDialogType(JFileChooser.OPEN_DIALOG);
                             fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
                             fileChooser.setMultiSelectionEnabled(false);
-                            fileChooser.setCurrentDirectory(new File("."));
+                            fileChooser.setCurrentDirectory(defaultRawImageDirectory);
                             final int result = fileChooser.showDialog(imagePanel, "Load");
 
                             if (result == JFileChooser.APPROVE_OPTION) {
@@ -224,7 +226,7 @@ public class RawImageEditor extends JFrame {
                             fileChooser.setDialogType(JFileChooser.SAVE_DIALOG);
                             fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
                             fileChooser.setMultiSelectionEnabled(false);
-                            fileChooser.setCurrentDirectory(new File("."));
+                            fileChooser.setCurrentDirectory(defaultRawImageDirectory);
                             final int result = fileChooser.showDialog(imagePanel, "Save");
 
                             if (result == JFileChooser.APPROVE_OPTION) {
@@ -502,6 +504,30 @@ public class RawImageEditor extends JFrame {
                 }
             }
         });
+    }
+
+    private static File getDefaultRawImageDirectory(String[] args) {
+        File defaultDirectory = new File(".");
+
+        if (args.length < 1) {
+            System.out.println("No default raw image directory specified as parameter. Using working directory \".\".");
+        } else if (args.length == 1) {
+            defaultDirectory = new File(args[0]);
+            if (defaultDirectory.isDirectory() && defaultDirectory.exists()) {
+                System.out.println("Using specified directory \"" + defaultDirectory + "\" as default directory for raw images.");
+            } else {
+                System.err.println("Specified default directory for raw images do not exist. \"" + defaultDirectory.getAbsolutePath() + "\"");
+                System.exit(1);
+            }
+        } else {
+            System.err.println("Unknown amount of parameters. You can only specify at most one default directory for raw images.");
+            for (int i = 0; i < args.length; i++) {
+                System.err.println("Argument " + i + ": \"" + args[i] + "\"");
+            }
+            System.exit(1);
+        }
+
+        return defaultDirectory;
     }
 
 }
